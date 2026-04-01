@@ -171,9 +171,9 @@ export default function TeamPage({ team, league, onBack }) {
           <img
             src={team.photo_url}
             alt={team.name}
-            style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', display: 'block', background: '#0a0a14' }}
           />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,20,0.85) 0%, transparent 60%)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(to top, rgba(10,10,20,0.9) 0%, transparent 100%)' }} />
         </div>
       )}
       <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
