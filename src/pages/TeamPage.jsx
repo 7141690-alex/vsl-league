@@ -113,6 +113,7 @@ export default function TeamPage({ team, league, onBack }) {
   const [matches, setMatches] = useState([])
   const [teams, setTeams] = useState({})
   const [loading, setLoading] = useState(true)
+  const [photoOpen, setPhotoOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -165,22 +166,36 @@ export default function TeamPage({ team, league, onBack }) {
         ← Назад к таблице
       </button>
 
-      {/* Team header */}
-      {team.photo_url && (
-        <div style={{ marginBottom: 24, borderRadius: 16, overflow: 'hidden', maxHeight: 220, position: 'relative' }}>
+      {/* Lightbox */}
+      {photoOpen && team.photo_url && (
+        <div
+          onClick={() => setPhotoOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, cursor: 'zoom-out' }}
+        >
           <img
             src={team.photo_url}
             alt={team.name}
-            style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', display: 'block', background: '#0a0a14' }}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }}
           />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(to top, rgba(10,10,20,0.9) 0%, transparent 100%)' }} />
         </div>
       )}
+
+      {/* Team header */}
       <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: '0 0 5px' }}>{team.name}</h1>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
-            {league === 'male' ? '♂ Мужская лига' : '♀ Женская лига'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {team.photo_url && (
+            <img
+              src={team.photo_url}
+              alt={team.name}
+              onClick={() => setPhotoOpen(true)}
+              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', cursor: 'zoom-in', flexShrink: 0 }}
+            />
+          )}
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: '0 0 5px' }}>{team.name}</h1>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
+              {league === 'male' ? '♂ Мужская лига' : '♀ Женская лига'}
+            </div>
           </div>
         </div>
         {pastMatches.length > 0 && (
