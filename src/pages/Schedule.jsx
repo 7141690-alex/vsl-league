@@ -60,7 +60,7 @@ function MatchCard({ match, teams, showDate = false }) {
       </div>
 
       {/* Score */}
-      <div style={{ textAlign: 'center', minWidth: 70, flexShrink: 0 }}>
+      <div style={{ textAlign: 'center', width: 60, flexShrink: 0 }}>
         {finished ? (
           <div>
             <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: '-0.02em' }}>
@@ -69,8 +69,8 @@ function MatchCard({ match, teams, showDate = false }) {
               <span style={{ color: awayWon ? '#fff' : 'rgba(255,255,255,0.3)' }}>{match.away_sets}</span>
             </div>
             {sets.length > 0 && (
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>
-                {sets.map(s => `${s.home_points}–${s.away_points}`).join(' ')}
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 2, lineHeight: 1.6, wordBreak: 'break-word' }}>
+                {sets.map(s => `${s.home_points}–${s.away_points}`).join('\n')}
               </div>
             )}
           </div>

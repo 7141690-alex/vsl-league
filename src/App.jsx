@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
@@ -30,6 +30,52 @@ const tabs = [
   { id: 'standings', label: 'Таблица', Icon: IconStandings },
   { id: 'schedule', label: 'Расписание', Icon: IconCalendar },
 ]
+
+function InstallBanner() {
+  const [show, setShow] = useState(false)
+  const [isIos, setIsIos] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+
+  useEffect(() => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const standalone = window.navigator.standalone === true
+    if (ios && !standalone) { setIsIos(true); setShow(true) }
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setShow(true)
+    })
+  }, [])
+
+  if (!show) return null
+
+  async function install() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      await deferredPrompt.userChoice
+      setShow(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 100, background: 'rgba(15,17,27,0.97)', border: '1px solid rgba(55,77,245,0.4)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
+      <div style={{ fontSize: 28, lineHeight: 1 }}>🏐</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Установить приложение</div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+          {isIos ? 'Нажмите  и выберите «На экран "Домой"»' : 'Добавить VSL на главный экран'}
+        </div>
+      </div>
+      {!isIos && (
+        <button onClick={install} style={{ background: 'linear-gradient(135deg, #374DF5, #6366f1)', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+          Установить
+        </button>
+      )}
+      <button onClick={() => setShow(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 18, padding: '0 4px', flexShrink: 0 }}>✕</button>
+    </div>
+  )
+}
 
 export default function App() {
   const [league, setLeague] = useState('male')
@@ -169,5 +215,6 @@ export default function App() {
 
       <div style={{ paddingBottom: 48 }} />
     </div>
+    <InstallBanner />
   )
 }
