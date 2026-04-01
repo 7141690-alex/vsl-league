@@ -1,0 +1,173 @@
+import { useState } from 'react'
+import Standings from './pages/Standings'
+import Schedule from './pages/Schedule'
+import Admin from './pages/Admin'
+import TeamPage from './pages/TeamPage'
+import MikasaBall from './components/MikasaBall'
+
+const IconStandings = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
+    <rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor" opacity="0.6"/>
+    <rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor" opacity="0.8"/>
+    <rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/>
+  </svg>
+)
+
+const IconCalendar = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
+    <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" strokeWidth="1.8"/>
+    <path d="M3 9h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <circle cx="8" cy="14" r="1.2" fill="currentColor"/>
+    <circle cx="12" cy="14" r="1.2" fill="currentColor"/>
+    <circle cx="16" cy="14" r="1.2" fill="currentColor"/>
+    <circle cx="8" cy="18" r="1.2" fill="currentColor"/>
+    <circle cx="12" cy="18" r="1.2" fill="currentColor"/>
+  </svg>
+)
+
+const tabs = [
+  { id: 'standings', label: 'Таблица', Icon: IconStandings },
+  { id: 'schedule', label: 'Расписание', Icon: IconCalendar },
+]
+
+export default function App() {
+  const [league, setLeague] = useState('male')
+  const [tab, setTab] = useState('standings')
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [selectedTeam, setSelectedTeam] = useState(null)
+
+  if (showAdmin) {
+    return (
+      <div className="min-h-screen w-full" style={{ background: 'linear-gradient(160deg, #0b1120 0%, #0f2044 40%, #0b1120 100%)' }}>
+        <div style={{ maxWidth: 896, margin: '0 auto', padding: '20px 16px 0' }}>
+          <button
+            onClick={() => setShowAdmin(false)}
+            style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', fontWeight: 600, marginBottom: 24 }}
+          >
+            ← На сайт
+          </button>
+        </div>
+        <Admin />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: 'linear-gradient(160deg, #0b1120 0%, #0f2044 40%, #0b1120 100%)' }}>
+
+      {/* Header */}
+      <header style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
+
+        {/* Background effects */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 600, height: 260, background: 'radial-gradient(ellipse, rgba(55,77,245,0.3) 0%, transparent 70%)', borderRadius: '50%' }} />
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '36px 36px' }} />
+        </div>
+
+        <div style={{ position: 'relative', maxWidth: 768, margin: '0 auto', padding: '20px 16px 0' }}>
+
+          {/* Top row: logo + admin */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+
+            {/* Logo + title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <MikasaBall size={68} />
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                  VSL
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em', marginTop: 1 }}>
+                  Volleyball Super League
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#5BB849', boxShadow: '0 0 5px #5BB849', display: 'inline-block' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Сезон 2026</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin button */}
+            <button
+              onClick={() => setShowAdmin(true)}
+              style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 12px', letterSpacing: '0.08em', fontWeight: 600 }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+            >
+              ⚙ ADMIN
+            </button>
+          </div>
+
+          {/* League + Tabs row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+
+            {/* League switcher — pill toggle */}
+            <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, gap: 2 }}>
+              {[{ id: 'male', label: '♂ Мужская' }, { id: 'female', label: '♀ Женская' }].map(l => (
+                <button key={l.id} onClick={() => { setLeague(l.id); setSelectedTeam(null) }}
+                  style={league === l.id ? {
+                    background: 'linear-gradient(135deg, #374DF5, #6366f1)',
+                    color: '#fff', boxShadow: '0 2px 10px rgba(55,77,245,0.45)',
+                    borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                  } : {
+                    background: 'transparent', color: 'rgba(255,255,255,0.45)',
+                    borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { if (league !== l.id) e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}
+                  onMouseLeave={e => { if (league !== l.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab buttons */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {tabs.map(({ id, label, Icon }) => (
+                <button key={id} onClick={() => { setTab(id); setSelectedTeam(null) }}
+                  style={tab === id ? {
+                    background: 'rgba(55,77,245,0.25)', color: '#fff',
+                    border: '1px solid rgba(55,77,245,0.6)',
+                    boxShadow: '0 2px 12px rgba(55,77,245,0.3)',
+                    borderRadius: 9, padding: '8px 18px',
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center',
+                  } : {
+                    background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)',
+                    border: '1px solid rgba(255,255,255,0.09)',
+                    borderRadius: 9, padding: '8px 18px',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center',
+                  }}
+                  onMouseEnter={e => { if (tab !== id) { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}}
+                  onMouseLeave={e => { if (tab !== id) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}}
+                >
+                  <Icon />{label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(55,77,245,0.5) 40%, rgba(55,77,245,0.5) 60%, transparent)' }} />
+      </header>
+
+      {/* Content */}
+      <main style={{ maxWidth: 768, margin: '0 auto', padding: '32px 16px' }}>
+        {selectedTeam ? (
+          <TeamPage team={selectedTeam} league={league} onBack={() => setSelectedTeam(null)} />
+        ) : (
+          <>
+            {tab === 'standings' && <Standings league={league} onSelectTeam={setSelectedTeam} />}
+            {tab === 'schedule' && <Schedule league={league} />}
+          </>
+        )}
+      </main>
+
+      <div style={{ paddingBottom: 48 }} />
+    </div>
+  )
+}

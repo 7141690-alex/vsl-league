@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>DB Schema — Warehouse App</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(160deg, #0b1120 0%, #0f2044 40%, #0b1120 100%);
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 40px;
+    user-select: none;
+  }
+
+  h1 { color: #fff; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 5px; text-align: center; }
+  .subtitle { color: rgba(255,255,255,0.3); font-size: 11px; margin-bottom: 48px; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .canvas {
+    position: relative;
+    width: 900px;
+    height: 560px;
+  }
+
+  #svg-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .db-table {
+    position: absolute;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1.5px solid;
+    min-width: 210px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .db-table.teams   { border-color: rgba(91,184,73,0.5);  background: rgba(91,184,73,0.05);  }
+  .db-table.players { border-color: rgba(55,77,245,0.5);  background: rgba(55,77,245,0.05);  }
+  .db-table.matches { border-color: rgba(255,140,66,0.5); background: rgba(255,140,66,0.05); }
+  .db-table.sets    { border-color: rgba(255,73,92,0.5);  background: rgba(255,73,92,0.05);  }
+
+  .tbl-head {
+    padding: 11px 14px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .tbl-icon {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+  }
+  .teams   .tbl-icon { background: rgba(91,184,73,0.2);  }
+  .players .tbl-icon { background: rgba(55,77,245,0.2);  }
+  .matches .tbl-icon { background: rgba(255,140,66,0.2); }
+  .sets    .tbl-icon { background: rgba(255,73,92,0.2);  }
+
+  .tbl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    gap: 20px;
+  }
+  .tbl-row:last-child { border-bottom: none; }
+  .tbl-row.fk-row { background: rgba(255,255,255,0.025); }
+
+  .col-name {
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .col-type { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.22); letter-spacing: 0.03em; }
+
+  .badge { font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 4px; letter-spacing: 0.03em; flex-shrink: 0; }
+  .pk { background: rgba(255,190,0,0.15); color: #FFB800; }
+  .fk { background: rgba(120,140,255,0.2); color: #8A9FFF; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 28px; margin-top: 36px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: rgba(255,255,255,0.4);
+  }
+  .leg-line { width: 26px; height: 2px; border-radius: 2px; flex-shrink: 0; }
+  .leg-dashed { width: 26px; height: 0; border-top: 2px dashed; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>Структура базы данных</h1>
+<div class="subtitle">Warehouse App · Volleyball Super League</div>
+
+<div class="canvas">
+  <svg id="svg-layer"></svg>
+
+  <!-- TEAMS -->
+  <div class="db-table teams" id="t-teams" style="top: 190px; left: 30px;">
+    <div class="tbl-head"><div class="tbl-icon">🏐</div>teams</div>
+    <div class="tbl-row"><div class="col-name"><span class="badge pk">PK</span>id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row"><div class="col-name">name</div><div class="col-type">text</div></div>
+    <div class="tbl-row"><div class="col-name">league</div><div class="col-type">text</div></div>
+  </div>
+
+  <!-- PLAYERS -->
+  <div class="db-table players" id="t-players" style="top: 360px; left: 340px;">
+    <div class="tbl-head"><div class="tbl-icon">👤</div>players</div>
+    <div class="tbl-row"><div class="col-name"><span class="badge pk">PK</span>id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row fk-row"><div class="col-name"><span class="badge fk">FK</span>team_id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row"><div class="col-name">name</div><div class="col-type">text</div></div>
+    <div class="tbl-row"><div class="col-name">height</div><div class="col-type">integer</div></div>
+  </div>
+
+  <!-- MATCHES -->
+  <div class="db-table matches" id="t-matches" style="top: 40px; left: 340px;">
+    <div class="tbl-head"><div class="tbl-icon">📅</div>matches</div>
+    <div class="tbl-row"><div class="col-name"><span class="badge pk">PK</span>id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row fk-row"><div class="col-name"><span class="badge fk">FK</span>home_team_id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row fk-row"><div class="col-name"><span class="badge fk">FK</span>away_team_id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row"><div class="col-name">league</div><div class="col-type">text</div></div>
+    <div class="tbl-row"><div class="col-name">match_date</div><div class="col-type">timestamp</div></div>
+    <div class="tbl-row"><div class="col-name">venue</div><div class="col-type">text</div></div>
+    <div class="tbl-row"><div class="col-name">status</div><div class="col-type">text</div></div>
+    <div class="tbl-row"><div class="col-name">home_sets</div><div class="col-type">integer</div></div>
+    <div class="tbl-row"><div class="col-name">away_sets</div><div class="col-type">integer</div></div>
+  </div>
+
+  <!-- SET_SCORES -->
+  <div class="db-table sets" id="t-sets" style="top: 160px; left: 660px;">
+    <div class="tbl-head"><div class="tbl-icon">📊</div>set_scores</div>
+    <div class="tbl-row"><div class="col-name"><span class="badge pk">PK</span>id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row fk-row"><div class="col-name"><span class="badge fk">FK</span>match_id</div><div class="col-type">uuid</div></div>
+    <div class="tbl-row"><div class="col-name">set_number</div><div class="col-type">integer</div></div>
+    <div class="tbl-row"><div class="col-name">home_points</div><div class="col-type">integer</div></div>
+    <div class="tbl-row"><div class="col-name">away_points</div><div class="col-type">integer</div></div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="leg-line" style="background:rgba(91,184,73,0.8)"></div>teams → players</div>
+  <div class="legend-item"><div class="leg-line" style="background:rgba(255,140,66,0.9)"></div>teams → matches (хозяева)</div>
+  <div class="legend-item"><div class="leg-dashed" style="border-color:rgba(255,140,66,0.6)"></div>teams → matches (гости)</div>
+  <div class="legend-item"><div class="leg-line" style="background:rgba(255,73,92,0.8)"></div>matches → set_scores</div>
+  <div class="legend-item"><span class="badge pk">PK</span>Первичный ключ</div>
+  <div class="legend-item"><span class="badge fk">FK</span>Внешний ключ</div>
+</div>
+
+<script>
+  function getRect(id) {
+    const el = document.getElementById(id)
+    const canvas = document.querySelector('.canvas')
+    const cr = canvas.getBoundingClientRect()
+    const r  = el.getBoundingClientRect()
+    return {
+      left:   r.left   - cr.left,
+      top:    r.top    - cr.top,
+      right:  r.right  - cr.left,
+      bottom: r.bottom - cr.top,
+      cx:     r.left   - cr.left + r.width  / 2,
+      cy:     r.top    - cr.top  + r.height / 2,
+      w:      r.width,
+      h:      r.height,
+    }
+  }
+
+  // Returns a point on the edge of a rect toward a given side
+  // side: 'left'|'right'|'top'|'bottom'
+  // offset: fractional position along that edge (0–1, default 0.5 = center)
+  function edgePoint(rect, side, offset = 0.5) {
+    switch (side) {
+      case 'left':   return { x: rect.left,   y: rect.top + rect.h * offset }
+      case 'right':  return { x: rect.right,  y: rect.top + rect.h * offset }
+      case 'top':    return { x: rect.left + rect.w * offset, y: rect.top    }
+      case 'bottom': return { x: rect.left + rect.w * offset, y: rect.bottom }
+    }
+  }
+
+  function makePath(x1,y1, x2,y2, color, dashed, svg) {
+    const dx = Math.abs(x2 - x1) * 0.5
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path')
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`)
+    path.setAttribute('stroke', color)
+    path.setAttribute('stroke-width', '2')
+    path.setAttribute('fill', 'none')
+    path.setAttribute('stroke-linecap', 'round')
+    if (dashed) path.setAttribute('stroke-dasharray', '5 4')
+    svg.appendChild(path)
+    return path
+  }
+
+  function makeArrow(x, y, direction, color, svg) {
+    // direction: 'right' | 'left' | 'down' | 'up'
+    const size = 7
+    let points
+    if (direction === 'right') points = `${x},${y-size/2} ${x+size},${y} ${x},${y+size/2}`
+    if (direction === 'left')  points = `${x},${y-size/2} ${x-size},${y} ${x},${y+size/2}`
+    if (direction === 'down')  points = `${x-size/2},${y} ${x},${y+size} ${x+size/2},${y}`
+    if (direction === 'up')    points = `${x-size/2},${y} ${x},${y-size} ${x+size/2},${y}`
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon')
+    poly.setAttribute('points', points)
+    poly.setAttribute('fill', color)
+    svg.appendChild(poly)
+  }
+
+  function makeCircle(x, y, color, svg) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle')
+    c.setAttribute('cx', x)
+    c.setAttribute('cy', y)
+    c.setAttribute('r', 4)
+    c.setAttribute('fill', 'none')
+    c.setAttribute('stroke', color)
+    c.setAttribute('stroke-width', '2')
+    svg.appendChild(c)
+  }
+
+  function makeLabel(x, y, text, color, svg) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text')
+    t.setAttribute('x', x)
+    t.setAttribute('y', y)
+    t.setAttribute('fill', color)
+    t.setAttribute('font-size', '10')
+    t.setAttribute('font-weight', '700')
+    t.setAttribute('font-family', '-apple-system, BlinkMacSystemFont, sans-serif')
+    t.setAttribute('text-anchor', 'middle')
+    t.textContent = text
+    svg.appendChild(t)
+  }
+
+  window.addEventListener('load', () => {
+    const svg = document.getElementById('svg-layer')
+
+    const teams   = getRect('t-teams')
+    const players = getRect('t-players')
+    const matches = getRect('t-matches')
+    const sets    = getRect('t-sets')
+
+    // ── teams → players (team_id) ──────────────────────────────
+    // right of teams → left of players
+    const c1 = '#5BB849'
+    const tp1 = edgePoint(teams,   'right', 0.72)
+    const tp2 = edgePoint(players, 'left',  0.37)
+    makePath(tp1.x, tp1.y, tp2.x, tp2.y, c1, false, svg)
+    makeCircle(tp1.x, tp1.y, c1, svg)
+    makeArrow(tp2.x, tp2.y, 'left', c1, svg)
+    makeLabel((tp1.x + tp2.x)/2, Math.min(tp1.y, tp2.y) - 6, 'team_id', c1, svg)
+
+    // ── teams → matches home_team_id ───────────────────────────
+    const c2 = 'rgba(255,140,66,0.95)'
+    // Find FK row for home_team_id (2nd row = index 1 in rows after header)
+    // offset ~0.30 aligns to the home_team_id row in matches
+    const tm1 = edgePoint(teams,   'right', 0.25)
+    const tm2 = edgePoint(matches, 'left',  0.30)
+    makePath(tm1.x, tm1.y, tm2.x, tm2.y, c2, false, svg)
+    makeCircle(tm1.x, tm1.y, c2, svg)
+    makeArrow(tm2.x, tm2.y, 'left', c2, svg)
+    makeLabel((tm1.x + tm2.x)/2, Math.min(tm1.y, tm2.y) - 7, 'home_team_id', c2, svg)
+
+    // ── teams → matches away_team_id ───────────────────────────
+    const c3 = 'rgba(255,140,66,0.55)'
+    const tm3 = edgePoint(teams,   'right', 0.36)
+    const tm4 = edgePoint(matches, 'left',  0.42)
+    makePath(tm3.x, tm3.y, tm4.x, tm4.y, c3, true, svg)
+    makeCircle(tm3.x, tm3.y, c3, svg)
+    makeArrow(tm4.x, tm4.y, 'left', c3, svg)
+    makeLabel((tm3.x + tm4.x)/2, Math.max(tm3.y, tm4.y) + 14, 'away_team_id', c3, svg)
+
+    // ── matches → set_scores (match_id) ────────────────────────
+    const c4 = 'rgba(255,73,92,0.9)'
+    const ms1 = edgePoint(matches, 'right', 0.5)
+    const ms2 = edgePoint(sets,    'left',  0.37)
+    makePath(ms1.x, ms1.y, ms2.x, ms2.y, c4, false, svg)
+    makeCircle(ms1.x, ms1.y, c4, svg)
+    makeArrow(ms2.x, ms2.y, 'left', c4, svg)
+    makeLabel((ms1.x + ms2.x)/2, Math.min(ms1.y, ms2.y) - 7, 'match_id', c4, svg)
+  })
+</script>
+</body>
+</html>
