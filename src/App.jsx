@@ -3,7 +3,6 @@ import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
 import TeamPage from './pages/TeamPage'
-import MikasaBall from './components/MikasaBall'
 
 const IconStandings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
@@ -125,7 +124,7 @@ export default function App() {
 
             {/* Logo + title */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <MikasaBall size={68} />
+              <img src="/logo.png" alt="VSL" style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
               <div>
                 <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   VSL
