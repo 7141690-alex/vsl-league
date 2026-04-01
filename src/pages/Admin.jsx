@@ -316,7 +316,7 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
   const [form, setForm] = useState({
     league: 'male', home_team_id: '', away_team_id: '',
     match_date: getNextSunday(), venue: '', status: 'scheduled',
-    home_sets: 0, away_sets: 0
+    home_sets: 0, away_sets: 0, photo_url: '', video_url: ''
   })
   const [sets, setSets] = useState([])
   const [editId, setEditId] = useState(null)
@@ -334,6 +334,8 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
       status: form.status,
       home_sets: parseInt(form.home_sets) || 0,
       away_sets: parseInt(form.away_sets) || 0,
+      photo_url: form.photo_url || null,
+      video_url: form.video_url || null,
     }
 
     let matchId = editId
@@ -360,7 +362,7 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
   }
 
   function resetForm() {
-    setForm({ league: 'male', home_team_id: '', away_team_id: '', match_date: getNextSunday(), venue: '', status: 'scheduled', home_sets: 0, away_sets: 0 })
+    setForm({ league: 'male', home_team_id: '', away_team_id: '', match_date: getNextSunday(), venue: '', status: 'scheduled', home_sets: 0, away_sets: 0, photo_url: '', video_url: '' })
     setSets([])
     setEditId(null)
   }
@@ -375,6 +377,8 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
       status: match.status,
       home_sets: match.home_sets,
       away_sets: match.away_sets,
+      photo_url: match.photo_url || '',
+      video_url: match.video_url || '',
     })
     setSets((match.set_scores || []).sort((a, b) => a.set_number - b.set_number).map(s => ({ home: s.home_points, away: s.away_points })))
     setEditId(match.id)
@@ -496,6 +500,30 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
                       placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Photo & Video URLs */}
+          {form.status === 'finished' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <div style={labelStyle}>📷 Фотоотчёт (ссылка)</div>
+                <input
+                  value={form.photo_url}
+                  onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))}
+                  placeholder="https://photos.google.com/..."
+                  style={inp}
+                />
+              </div>
+              <div>
+                <div style={labelStyle}>▶ Видеозапись (YouTube)</div>
+                <input
+                  value={form.video_url}
+                  onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=..."
+                  style={inp}
+                />
               </div>
             </div>
           )}

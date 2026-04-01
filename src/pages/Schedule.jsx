@@ -88,8 +88,31 @@ function MatchCard({ match, teams, showDate = false }) {
         {away?.name || '—'}
       </div>
 
-      {/* Status dot */}
-      <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: finished ? '#5BB849' : '#374DF5', boxShadow: `0 0 5px ${finished ? '#5BB849' : '#374DF5'}` }} />
+      {/* Media icons + status dot */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {finished && match.photo_url && (
+          <a href={match.photo_url} target="_blank" rel="noopener noreferrer"
+            style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+            title="Фотоотчёт">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="5" width="20" height="15" rx="3" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8"/>
+              <circle cx="12" cy="12.5" r="3.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8"/>
+              <path d="M8 5l1.5-2h5L16 5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"/>
+            </svg>
+          </a>
+        )}
+        {finished && match.video_url && (
+          <a href={match.video_url} target="_blank" rel="noopener noreferrer"
+            style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(255,0,0,0.15)', border: '1px solid rgba(255,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+            title="Видеозапись">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="5" width="20" height="14" rx="3" fill="rgba(255,50,50,0.8)"/>
+              <path d="M10 9l6 3-6 3V9z" fill="#fff"/>
+            </svg>
+          </a>
+        )}
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: finished ? '#5BB849' : '#374DF5', boxShadow: `0 0 5px ${finished ? '#5BB849' : '#374DF5'}` }} />
+      </div>
     </div>
   )
 }

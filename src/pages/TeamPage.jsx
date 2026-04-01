@@ -77,6 +77,33 @@ function MatchRow({ match, teamId, teams }) {
           {won ? 'В' : 'П'}
         </div>
       )}
+
+      {/* Media icons */}
+      {finished && (match.photo_url || match.video_url) && (
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          {match.photo_url && (
+            <a href={match.photo_url} target="_blank" rel="noopener noreferrer"
+              style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+              title="Фотоотчёт">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="5" width="20" height="15" rx="3" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8"/>
+                <circle cx="12" cy="12.5" r="3.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8"/>
+                <path d="M8 5l1.5-2h5L16 5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"/>
+              </svg>
+            </a>
+          )}
+          {match.video_url && (
+            <a href={match.video_url} target="_blank" rel="noopener noreferrer"
+              style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,0,0,0.15)', border: '1px solid rgba(255,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+              title="Видеозапись">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="5" width="20" height="14" rx="3" fill="rgba(255,50,50,0.8)"/>
+                <path d="M10 9l6 3-6 3V9z" fill="#fff"/>
+              </svg>
+            </a>
+          )}
+        </div>
+      )}
     </div>
   )
 }
