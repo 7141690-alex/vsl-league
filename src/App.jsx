@@ -59,20 +59,27 @@ function InstallBanner() {
   }
 
   return (
-    <div style={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 100, background: 'rgba(15,17,27,0.97)', border: '1px solid rgba(55,77,245,0.4)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
-      <div style={{ fontSize: 28, lineHeight: 1 }}>🏐</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Установить приложение</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-          {isIos ? 'Нажмите  и выберите «На экран "Домой"»' : 'Добавить VSL на главный экран'}
+    <div style={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 100, background: 'rgba(15,17,27,0.97)', border: '1px solid rgba(55,77,245,0.4)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ fontSize: 26, lineHeight: 1 }}>🏐</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Установить приложение</div>
+          {isIos ? (
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+              Нажмите <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', borderRadius: 4, padding: '1px 5px', fontSize: 13 }}>⎋</span> внизу экрана и выберите<br/>
+              <span style={{ color: '#fff', fontWeight: 600 }}>«На экран "Домой"»</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Добавить VSL на главный экран</div>
+          )}
         </div>
+        {!isIos && (
+          <button onClick={install} style={{ background: 'linear-gradient(135deg, #374DF5, #6366f1)', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+            Установить
+          </button>
+        )}
+        <button onClick={() => setShow(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16, padding: '6px 10px', flexShrink: 0, borderRadius: 8 }}>✕</button>
       </div>
-      {!isIos && (
-        <button onClick={install} style={{ background: 'linear-gradient(135deg, #374DF5, #6366f1)', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-          Установить
-        </button>
-      )}
-      <button onClick={() => setShow(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 18, padding: '0 4px', flexShrink: 0 }}>✕</button>
     </div>
   )
 }
