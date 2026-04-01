@@ -36,19 +36,19 @@ function MatchCard({ match, teams, showDate = false }) {
     <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
 
       {/* Time + venue */}
-      <div style={{ minWidth: 140, flexShrink: 0 }}>
+      <div style={{ width: 48, flexShrink: 0, overflow: 'hidden' }}>
         {match.match_date && (
           <div style={{ fontSize: 12, fontWeight: 700, color: '#374DF5' }}>
             {new Date(match.match_date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
         {showDate && match.match_date && (
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
-            {new Date(match.match_date).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })}
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
+            {new Date(match.match_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
           </div>
         )}
         {match.venue && (
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             📍 {match.venue}
           </div>
         )}
