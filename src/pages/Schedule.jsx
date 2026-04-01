@@ -156,7 +156,7 @@ export default function Schedule({ league }) {
       setLoading(true)
       try {
         const [{ data: matchesData, error: me }, { data: teamsData, error: te }] = await Promise.all([
-          supabase.from('matches').select('id, league, home_team_id, away_team_id, match_date, venue, status, home_sets, away_sets').eq('league', league).order('match_date'),
+          supabase.from('matches').select('id, league, home_team_id, away_team_id, match_date, venue, status, home_sets, away_sets, photo_url, video_url').eq('league', league).order('match_date'),
           supabase.from('teams').select('*').eq('league', league),
         ])
         if (me || te) { console.error('Supabase error:', me || te); setLoading(false); return }
