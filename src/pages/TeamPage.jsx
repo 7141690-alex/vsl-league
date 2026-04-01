@@ -166,6 +166,16 @@ export default function TeamPage({ team, league, onBack }) {
       </button>
 
       {/* Team header */}
+      {team.photo_url && (
+        <div style={{ marginBottom: 24, borderRadius: 16, overflow: 'hidden', maxHeight: 220, position: 'relative' }}>
+          <img
+            src={team.photo_url}
+            alt={team.name}
+            style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,20,0.85) 0%, transparent 60%)' }} />
+        </div>
+      )}
       <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: '0 0 5px' }}>{team.name}</h1>
