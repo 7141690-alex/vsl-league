@@ -214,7 +214,7 @@ export default function App() {
       </main>
 
       <div style={{ paddingBottom: 48 }} />
+      <InstallBanner />
     </div>
-    <InstallBanner />
   )
 }
