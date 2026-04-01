@@ -69,8 +69,10 @@ function MatchCard({ match, teams, showDate = false }) {
               <span style={{ color: awayWon ? '#fff' : 'rgba(255,255,255,0.3)' }}>{match.away_sets}</span>
             </div>
             {sets.length > 0 && (
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 2, lineHeight: 1.6, wordBreak: 'break-word' }}>
-                {sets.map(s => `${s.home_points}–${s.away_points}`).join('\n')}
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 2, lineHeight: 1.7 }}>
+                {sets.map((s, i) => (
+                  <div key={i}>{s.home_points}–{s.away_points}</div>
+                ))}
               </div>
             )}
           </div>
