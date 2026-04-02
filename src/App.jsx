@@ -3,6 +3,7 @@ import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
 import TeamPage from './pages/TeamPage'
+import PlayerPage from './pages/PlayerPage'
 
 const IconStandings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
@@ -88,6 +89,7 @@ export default function App() {
   const [tab, setTab] = useState('standings')
   const [showAdmin, setShowAdmin] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState(null)
+  const [selectedPlayer, setSelectedPlayer] = useState(null)
 
   if (showAdmin) {
     return (
@@ -156,7 +158,7 @@ export default function App() {
             {/* League switcher — pill toggle */}
             <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, gap: 2 }}>
               {[{ id: 'male', label: '♂ Мужская' }, { id: 'female', label: '♀ Женская' }].map(l => (
-                <button key={l.id} onClick={() => { setLeague(l.id); setSelectedTeam(null) }}
+                <button key={l.id} onClick={() => { setLeague(l.id); setSelectedTeam(null); setSelectedPlayer(null) }}
                   style={league === l.id ? {
                     background: 'linear-gradient(135deg, #374DF5, #6366f1)',
                     color: '#fff', boxShadow: '0 2px 10px rgba(55,77,245,0.45)',
@@ -178,7 +180,7 @@ export default function App() {
             {/* Tab buttons */}
             <div style={{ display: 'flex', gap: 6 }}>
               {tabs.map(({ id, label, Icon }) => (
-                <button key={id} onClick={() => { setTab(id); setSelectedTeam(null) }}
+                <button key={id} onClick={() => { setTab(id); setSelectedTeam(null); setSelectedPlayer(null) }}
                   style={tab === id ? {
                     background: 'rgba(55,77,245,0.25)', color: '#fff',
                     border: '1px solid rgba(55,77,245,0.6)',
@@ -209,8 +211,10 @@ export default function App() {
 
       {/* Content */}
       <main style={{ maxWidth: 768, margin: '0 auto', padding: '32px 16px' }}>
-        {selectedTeam ? (
-          <TeamPage team={selectedTeam} league={league} onBack={() => setSelectedTeam(null)} />
+        {selectedPlayer ? (
+          <PlayerPage playerId={selectedPlayer} onBack={() => setSelectedPlayer(null)} />
+        ) : selectedTeam ? (
+          <TeamPage team={selectedTeam} league={league} onBack={() => setSelectedTeam(null)} onSelectPlayer={setSelectedPlayer} />
         ) : (
           <>
             {tab === 'standings' && <Standings league={league} onSelectTeam={setSelectedTeam} />}

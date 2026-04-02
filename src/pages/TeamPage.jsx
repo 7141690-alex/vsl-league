@@ -109,7 +109,7 @@ function MatchRow({ match, teamId, teams }) {
   )
 }
 
-export default function TeamPage({ team, league, onBack }) {
+export default function TeamPage({ team, league, onBack, onSelectPlayer }) {
   const [players, setPlayers] = useState([])
   const [matches, setMatches] = useState([])
   const [teams, setTeams] = useState({})
@@ -120,8 +120,12 @@ export default function TeamPage({ team, league, onBack }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const [{ data: playersData }, { data: matchesData }, { data: teamsData }, { data: awardsData }] = await Promise.all([
-        supabase.from('players').select('*').eq('team_id', team.id).order('jersey_number', { ascending: true, nullsFirst: false }),
+      const [{ data: membershipsData }, { data: matchesData }, { data: teamsData }, { data: awardsData }] = await Promise.all([
+        supabase.from('team_memberships')
+          .select('id, jersey_number, is_captain, player_id, players(id, name, height, birth_date, gender)')
+          .eq('team_id', team.id)
+          .is('left_at', null)
+          .order('jersey_number', { ascending: true, nullsFirst: false }),
         supabase.from('matches')
           .select('*, set_scores(*)')
           .eq('league', league)
@@ -130,10 +134,9 @@ export default function TeamPage({ team, league, onBack }) {
         supabase.from('teams').select('*').eq('league', league),
         supabase.from('awards').select('player_id, nomination').eq('team_id', team.id),
       ])
-      setPlayers(playersData || [])
+      setPlayers(membershipsData || [])
       setTeams((teamsData || []).reduce((acc, t) => ({ ...acc, [t.id]: t }), {}))
       setMatches(matchesData || [])
-      // Build map: player_id → [nomination, nomination, ...]
       const map = {}
       for (const a of (awardsData || [])) {
         if (!map[a.player_id]) map[a.player_id] = []
@@ -247,19 +250,26 @@ export default function TeamPage({ team, league, onBack }) {
               Состав не заполнен
             </div>
           ) : (
-            players.map((p, i) => (
-              <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '44px 1fr 90px', padding: '12px 16px', alignItems: 'center', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: p.jersey_number != null ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)' }}>
-                  {p.jersey_number != null ? p.jersey_number : '—'}
+            players.map((m, i) => {
+              const p = m.players || {}
+              return (
+              <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '44px 1fr 90px', padding: '12px 16px', alignItems: 'center', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: m.jersey_number != null ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)' }}>
+                  {m.jersey_number != null ? m.jersey_number : '—'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{p.name}</span>
-                  {p.is_captain && (
+                  <span
+                    onClick={() => onSelectPlayer && onSelectPlayer(m.player_id)}
+                    style={{ fontSize: 13, fontWeight: 600, color: '#fff', cursor: onSelectPlayer ? 'pointer' : 'default', borderBottom: onSelectPlayer ? '1px solid rgba(255,255,255,0.25)' : 'none', paddingBottom: 1 }}
+                  >
+                    {p.name}
+                  </span>
+                  {m.is_captain && (
                     <span style={{ fontSize: 9, fontWeight: 800, color: '#F5A623', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 4, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
                       C
                     </span>
                   )}
-                  {(awardsMap[p.id] || []).map((nom, idx) => (
+                  {(awardsMap[m.player_id] || []).map((nom, idx) => (
                     <AwardBadge key={idx} nomination={nom} size={16} />
                   ))}
                 </div>
@@ -273,7 +283,8 @@ export default function TeamPage({ team, league, onBack }) {
                   )}
                 </div>
               </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
