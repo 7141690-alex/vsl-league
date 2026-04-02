@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import AwardBadge from '../components/AwardBadge'
 
 function SectionHeader({ icon, title, accent, count, countLabel }) {
   return (
@@ -114,11 +115,12 @@ export default function TeamPage({ team, league, onBack }) {
   const [teams, setTeams] = useState({})
   const [loading, setLoading] = useState(true)
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [awardsMap, setAwardsMap] = useState({})
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const [{ data: playersData }, { data: matchesData }, { data: teamsData }] = await Promise.all([
+      const [{ data: playersData }, { data: matchesData }, { data: teamsData }, { data: awardsData }] = await Promise.all([
         supabase.from('players').select('*').eq('team_id', team.id).order('jersey_number', { ascending: true, nullsFirst: false }),
         supabase.from('matches')
           .select('*, set_scores(*)')
@@ -126,10 +128,18 @@ export default function TeamPage({ team, league, onBack }) {
           .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
           .order('match_date'),
         supabase.from('teams').select('*').eq('league', league),
+        supabase.from('awards').select('player_id, nomination').eq('team_id', team.id),
       ])
       setPlayers(playersData || [])
       setTeams((teamsData || []).reduce((acc, t) => ({ ...acc, [t.id]: t }), {}))
       setMatches(matchesData || [])
+      // Build map: player_id → [nomination, nomination, ...]
+      const map = {}
+      for (const a of (awardsData || [])) {
+        if (!map[a.player_id]) map[a.player_id] = []
+        map[a.player_id].push(a.nomination)
+      }
+      setAwardsMap(map)
       setLoading(false)
     }
     load()
@@ -242,13 +252,16 @@ export default function TeamPage({ team, league, onBack }) {
                 <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: p.jersey_number != null ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)' }}>
                   {p.jersey_number != null ? p.jersey_number : '—'}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{p.name}</span>
                   {p.is_captain && (
                     <span style={{ fontSize: 9, fontWeight: 800, color: '#F5A623', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 4, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
                       C
                     </span>
                   )}
+                  {(awardsMap[p.id] || []).map((nom, idx) => (
+                    <AwardBadge key={idx} nomination={nom} size={16} />
+                  ))}
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   {p.height ? (

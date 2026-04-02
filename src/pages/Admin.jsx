@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
 function getNextSunday() {
   const d = new Date()
@@ -148,7 +149,7 @@ export default function Admin() {
 
       {/* Tabs */}
       <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, gap: 2, marginBottom: 24 }}>
-        {[{ id: 'teams', label: 'Команды' }, { id: 'matches', label: 'Игры' }, { id: 'players', label: 'Игроки' }].map(t => (
+        {[{ id: 'teams', label: 'Команды' }, { id: 'matches', label: 'Игры' }, { id: 'players', label: 'Игроки' }, { id: 'awards', label: '🏅 Награды' }].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             style={activeTab === t.id ? {
               background: 'linear-gradient(135deg, #374DF5, #6366f1)',
@@ -168,6 +169,7 @@ export default function Admin() {
       {activeTab === 'teams' && <TeamsAdmin teams={teams} onUpdate={loadTeams} />}
       {activeTab === 'matches' && <MatchesAdmin matches={matches} teams={teams} onUpdate={loadMatches} />}
       {activeTab === 'players' && <PlayersAdmin teams={teams} />}
+      {activeTab === 'awards' && <AwardsAdmin teams={teams} />}
     </div>
   )
 }
@@ -784,6 +786,162 @@ function PlayersAdmin({ teams }) {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+function AwardsAdmin({ teams }) {
+  const [form, setForm] = useState({ league: 'male', team_id: '', player_id: '', nomination: 'setter', match_date: '', stat_value: '' })
+  const [players, setPlayers] = useState([])
+  const [awards, setAwards] = useState([])
+
+  const labelStyle = { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }
+
+  const leagueTeams = teams.filter(t => t.league === form.league)
+
+  useEffect(() => { loadAwards() }, [])
+
+  useEffect(() => {
+    if (form.team_id) {
+      supabase.from('players').select('*').eq('team_id', form.team_id).order('name').then(({ data }) => setPlayers(data || []))
+    } else {
+      setPlayers([])
+      setForm(f => ({ ...f, player_id: '' }))
+    }
+  }, [form.team_id])
+
+  useEffect(() => {
+    setForm(f => ({ ...f, team_id: '', player_id: '' }))
+  }, [form.league])
+
+  async function loadAwards() {
+    const { data } = await supabase
+      .from('awards')
+      .select('*, players(name), teams(name)')
+      .order('match_date', { ascending: false })
+    setAwards(data || [])
+  }
+
+  async function addAward(e) {
+    e.preventDefault()
+    if (!form.player_id || !form.match_date) return
+    await supabase.from('awards').insert({
+      player_id: form.player_id,
+      team_id: form.team_id,
+      league: form.league,
+      nomination: form.nomination,
+      match_date: form.match_date,
+      stat_value: parseFloat(form.stat_value) || null,
+    })
+    setForm(f => ({ ...f, player_id: '', match_date: '', stat_value: '' }))
+    loadAwards()
+  }
+
+  async function deleteAward(id) {
+    if (!confirm('Удалить награду?')) return
+    await supabase.from('awards').delete().eq('id', id)
+    loadAwards()
+  }
+
+  const statPlaceholder = { setter: 'Кол-во пасов', server: 'Кол-во эйсов', attacker: 'Кол-во очков', libero: 'Процент (%)' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Form */}
+      <div style={{ ...card, padding: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 18 }}>
+          Выдать награду
+        </div>
+        <form onSubmit={addAward} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* League + Nomination */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Лига</div>
+              <select value={form.league} onChange={e => setForm(f => ({ ...f, league: e.target.value }))} style={inp}>
+                <option value="male">Мужская лига</option>
+                <option value="female">Женская лига</option>
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>Номинация</div>
+              <select value={form.nomination} onChange={e => setForm(f => ({ ...f, nomination: e.target.value }))} style={inp}>
+                {Object.entries(AWARD_CONFIG).map(([key, cfg]) => (
+                  <option key={key} value={key}>{cfg.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Team + Player */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Команда</div>
+              <select value={form.team_id} onChange={e => setForm(f => ({ ...f, team_id: e.target.value }))} style={inp}>
+                <option value="">— выберите —</option>
+                {leagueTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>Игрок</div>
+              <select value={form.player_id} onChange={e => setForm(f => ({ ...f, player_id: e.target.value }))} style={inp} disabled={!form.team_id}>
+                <option value="">— выберите —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Date + Stat */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Дата игры</div>
+              <input type="date" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} style={{ ...inp, colorScheme: 'dark' }} />
+            </div>
+            <div>
+              <div style={labelStyle}>{AWARD_CONFIG[form.nomination]?.label}</div>
+              <input
+                type="number"
+                value={form.stat_value}
+                onChange={e => setForm(f => ({ ...f, stat_value: e.target.value }))}
+                placeholder={statPlaceholder[form.nomination]}
+                style={inp}
+              />
+            </div>
+          </div>
+
+          <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Выдать награду</button>
+        </form>
+      </div>
+
+      {/* Awards list */}
+      <div style={card}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Все награды
+        </div>
+        {awards.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет наград</div>
+        ) : (
+          awards.map((a, i) => {
+            const cfg = AWARD_CONFIG[a.nomination]
+            const stat = a.stat_value != null ? `${a.stat_value}${a.nomination === 'libero' ? '%' : ` ${cfg?.statLabel}`}` : '—'
+            return (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <AwardBadge nomination={a.nomination} size={22} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{a.players?.name || '—'}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+                      {a.teams?.name} · {cfg?.label} · {stat} · {a.match_date}
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => deleteAward(a.id)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px', flexShrink: 0 }}>
+                  Удалить
+                </button>
+              </div>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }
