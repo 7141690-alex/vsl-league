@@ -143,10 +143,10 @@ export default function App() {
     <div className="min-h-screen w-full" style={{ background: 'linear-gradient(160deg, #0b1120 0%, #0f2044 40%, #0b1120 100%)' }}>
 
       {/* Header */}
-      <header style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
+      <header style={{ position: 'relative', width: '100%' }}>
 
         {/* Background effects */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 600, height: 260, background: 'radial-gradient(ellipse, rgba(55,77,245,0.3) 0%, transparent 70%)', borderRadius: '50%' }} />
           <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '36px 36px' }} />
         </div>
