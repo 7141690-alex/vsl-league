@@ -654,12 +654,6 @@ function PlayersAdmin({ teams }) {
     load()
   }
 
-  async function resetAll() {
-    if (!confirm('Удалить ВСЕХ игроков, членства и номинации? Отменить нельзя.')) return
-    const { data: all } = await supabase.from('players').select('id')
-    if (all?.length) await supabase.from('players').delete().in('id', all.map(p => p.id))
-    load()
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -796,16 +790,6 @@ function PlayersAdmin({ teams }) {
         })}
       </div>
 
-      {/* Danger zone */}
-      {players.length > 0 && (
-        <div style={{ ...card, padding: 20, border: '1px solid rgba(255,73,92,0.2)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#FF495C', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Опасная зона</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Удалить всех игроков, членства и номинации</span>
-            <button onClick={resetAll} style={{ ...btnSecondary, color: '#FF495C', borderColor: 'rgba(255,73,92,0.3)', background: 'rgba(255,73,92,0.06)', padding: '8px 16px', fontSize: 12 }}>Сбросить всё</button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
