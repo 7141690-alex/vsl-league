@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import AwardBadge from '../components/AwardBadge'
+import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
 function SectionHeader({ icon, title, accent, count, countLabel }) {
   return (
@@ -278,6 +278,9 @@ export default function TeamPage({ team, league, onBack }) {
         </div>
       </div>
 
+      {/* Team nominations */}
+      <TeamAwardsWidget teamId={team.id} />
+
       {/* Upcoming games */}
       {upcomingMatches.length > 0 && (
         <div style={{ marginBottom: 36 }}>
@@ -323,6 +326,63 @@ export default function TeamPage({ team, league, onBack }) {
             <MatchRow key={m.id} match={m} teamId={team.id} teams={teams} />
           ))
         )}
+      </div>
+    </div>
+  )
+}
+
+function TeamAwardsWidget({ teamId }) {
+  const [awards, setAwards] = useState([])
+
+  useEffect(() => {
+    supabase
+      .from('awards')
+      .select('*, players(name)')
+      .eq('team_id', teamId)
+      .order('match_date', { ascending: false })
+      .then(({ data }) => setAwards(data || []))
+  }, [teamId])
+
+  if (awards.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 36, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 15 }}>🏅</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Номинации</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.07)', borderRadius: 6, padding: '2px 8px' }}>
+          {awards.length}
+        </span>
+      </div>
+      <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+        {awards.map((a, i) => {
+          const cfg = AWARD_CONFIG[a.nomination]
+          const stat = a.nomination !== 'mvp' && a.stat_value != null
+            ? `${a.stat_value}${a.nomination === 'libero' ? '%' : ` ${cfg?.statLabel}`}`
+            : null
+          return (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <AwardBadge nomination={a.nomination} size={a.nomination === 'mvp' ? 36 : 22} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{a.players?.name || '—'}</span>
+                  {stat && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: cfg?.mid, background: `${cfg?.mid}22`, borderRadius: 6, padding: '1px 7px', flexShrink: 0 }}>
+                      {stat}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{cfg?.label}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>·</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+                    {new Date(a.match_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
