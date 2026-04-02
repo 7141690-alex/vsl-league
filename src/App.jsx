@@ -225,7 +225,7 @@ export default function App() {
                   {/* Dropdown list — position: fixed чтобы не обрезался родителями */}
                   <div style={{
                     position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000,
-                    background: 'rgba(15,20,40,0.98)', border: '1px solid rgba(255,255,255,0.14)',
+                    background: 'rgb(15,20,40)', border: '1px solid rgba(255,255,255,0.14)',
                     borderRadius: 12, overflow: 'hidden', minWidth: 200,
                     boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   }}>
