@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
@@ -98,6 +98,8 @@ export default function App() {
   const [leagues, setLeagues] = useState(DEFAULT_LEAGUES)
   const [league, setLeague] = useState('male')
   const [leagueDropdownOpen, setLeagueDropdownOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
+  const leagueBtnRef = useRef(null)
   const [tab, setTab] = useState('standings')
   const [showAdmin, setShowAdmin] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState(null)
@@ -190,7 +192,14 @@ export default function App() {
             {/* League dropdown */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
-                onClick={() => setLeagueDropdownOpen(v => !v)}
+                ref={leagueBtnRef}
+                onClick={() => {
+                  if (!leagueDropdownOpen && leagueBtnRef.current) {
+                    const r = leagueBtnRef.current.getBoundingClientRect()
+                    setDropdownPos({ top: r.bottom + 6, left: r.left })
+                  }
+                  setLeagueDropdownOpen(v => !v)
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
@@ -213,9 +222,9 @@ export default function App() {
                     style={{ position: 'fixed', inset: 0, zIndex: 9 }}
                     onClick={() => setLeagueDropdownOpen(false)}
                   />
-                  {/* Dropdown list */}
+                  {/* Dropdown list — position: fixed чтобы не обрезался родителями */}
                   <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 10,
+                    position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000,
                     background: 'rgba(15,20,40,0.98)', border: '1px solid rgba(255,255,255,0.14)',
                     borderRadius: 12, overflow: 'hidden', minWidth: 200,
                     boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
