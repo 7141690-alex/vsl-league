@@ -189,8 +189,8 @@ export default function App() {
           {/* League + Tabs row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, gap: 8, flexWrap: 'nowrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
 
-            {/* League dropdown */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            {/* League dropdown — только кнопка, само меню рендерится в конце App */}
+            <div style={{ flexShrink: 0 }}>
               <button
                 ref={leagueBtnRef}
                 onClick={() => {
@@ -214,51 +214,6 @@ export default function App() {
                   <path d="M2 4l4 4 4-4" stroke="rgba(255,255,255,0.5)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
-
-              {leagueDropdownOpen && (
-                <>
-                  {/* Backdrop — клик вне закрывает */}
-                  <div
-                    style={{ position: 'fixed', inset: 0, zIndex: 9 }}
-                    onClick={() => setLeagueDropdownOpen(false)}
-                  />
-                  {/* Dropdown list — position: fixed чтобы не обрезался родителями */}
-                  <div style={{
-                    position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000,
-                    background: 'rgb(15,20,40)', border: '1px solid rgba(255,255,255,0.14)',
-                    borderRadius: 12, overflow: 'hidden', minWidth: 200,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                  }}>
-                    {leagues.map((l, i) => {
-                      const active = l.name === league
-                      return (
-                        <button
-                          key={l.name}
-                          onClick={() => { setLeague(l.name); resetNav(); setLeagueDropdownOpen(false) }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            width: '100%', padding: '11px 16px', cursor: 'pointer',
-                            background: active ? 'rgba(55,77,245,0.2)' : 'transparent',
-                            border: 'none',
-                            borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                            textAlign: 'left', transition: 'background 0.12s',
-                          }}
-                          onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-                          onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-                        >
-                          <span style={{ fontSize: 14 }}>{GENDER_ICON[l.gender] || '🏐'}</span>
-                          <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#fff' : 'rgba(255,255,255,0.7)' }}>
-                            {l.display_name}
-                          </span>
-                          {active && (
-                            <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#374DF5', boxShadow: '0 0 6px #374DF5', flexShrink: 0 }} />
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
             </div>
 
             {/* Tab buttons */}
@@ -321,6 +276,50 @@ export default function App() {
 
       <div style={{ paddingBottom: 48 }} />
       <InstallBanner />
+
+      {/* League dropdown menu — рендерится последним, поверх всего */}
+      {leagueDropdownOpen && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+            onClick={() => setLeagueDropdownOpen(false)}
+          />
+          <div style={{
+            position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999,
+            background: 'rgb(13,18,38)', border: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: 12, overflow: 'hidden', minWidth: 200,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+          }}>
+            {leagues.map((l, i) => {
+              const active = l.name === league
+              return (
+                <button
+                  key={l.name}
+                  onClick={() => { setLeague(l.name); resetNav(); setLeagueDropdownOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    width: '100%', padding: '11px 16px', cursor: 'pointer',
+                    background: active ? 'rgba(55,77,245,0.25)' : 'rgb(13,18,38)',
+                    border: 'none',
+                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'rgb(13,18,38)' }}
+                >
+                  <span style={{ fontSize: 14 }}>{GENDER_ICON[l.gender] || '🏐'}</span>
+                  <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#fff' : 'rgba(255,255,255,0.7)' }}>
+                    {l.display_name}
+                  </span>
+                  {active && (
+                    <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#374DF5', boxShadow: '0 0 6px #374DF5', flexShrink: 0 }} />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
