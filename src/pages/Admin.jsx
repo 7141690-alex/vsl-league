@@ -222,12 +222,28 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
   async function addTeam(e) {
     e.preventDefault()
     if (!form.name.trim()) return
-    await supabase.from('teams').insert({
+    const insertData = {
       name: form.name.trim(),
       league: form.league,
       photo_url: form.photo_url.trim() || null,
-      active: form.active,
-    })
+    }
+    // active может отсутствовать в старых БД — добавляем только если поле существует
+    try {
+      const { error } = await supabase.from('teams').insert({ ...insertData, active: form.active })
+      if (error) {
+        // Если ошибка из-за колонки active — пробуем без неё
+        if (error.message?.includes('active')) {
+          const { error: e2 } = await supabase.from('teams').insert(insertData)
+          if (e2) { alert('Ошибка при добавлении команды: ' + e2.message); return }
+        } else {
+          alert('Ошибка при добавлении команды: ' + error.message)
+          return
+        }
+      }
+    } catch (err) {
+      alert('Ошибка: ' + err.message)
+      return
+    }
     await logAction(userEmail, 'Добавлено', 'команда', form.name.trim(), { league: form.league })
     setForm({ name: '', league: form.league, photo_url: '', active: true })
     onUpdate()
@@ -374,8 +390,13 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
         </div>
       )}
 
-      {/* Списки по лигам */}
-      {Object.entries(grouped).map(([lgName, lgTeams]) => (
+      {/* Списки по лигам — все лиги из таблицы leagues + лиги у которых есть команды */}
+      {[
+        ...leagueOptions.map(l => l.name),
+        ...Object.keys(grouped).filter(k => !leagueOptions.find(l => l.name === k)),
+      ].map(lgName => {
+        const lgTeams = grouped[lgName] || []
+        return (
         <div key={lgName}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <div style={{ width: 3, height: 16, borderRadius: 2, background: '#374DF5' }} />
@@ -389,7 +410,8 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
             }
           </div>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
