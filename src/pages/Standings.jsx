@@ -65,7 +65,7 @@ export default function Standings({ league, onSelectTeam, onShowAwards }) {
 
   return (
     <>
-    <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden', width: '100%' }}>
+    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden', width: '100%' }}>
       {/* Table header */}
       <div style={{ display: 'grid', gridTemplateColumns: '4px 28px 1fr 28px 28px 28px 38px 38px 46px', width: '100%', padding: '12px 10px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div></div>
