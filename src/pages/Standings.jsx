@@ -140,8 +140,8 @@ export default function Standings({ league, onSelectTeam }) {
       </div>
     </div>
 
-    <CalendarWidget league={league} />
     <AwardsWidget league={league} />
+    <CalendarWidget league={league} />
     </>
   )
 }
@@ -171,7 +171,7 @@ function AwardsWidget({ league }) {
       {/* Header */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 16 }}>🏅</span>
-        <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Лучшие игроки</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Номинации</span>
       </div>
 
       {/* Scrollable list */}

@@ -891,21 +891,23 @@ function AwardsAdmin({ teams }) {
           </div>
 
           {/* Date + Stat */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: form.nomination === 'mvp' ? '1fr' : '1fr 1fr', gap: 12 }}>
             <div>
               <div style={labelStyle}>Дата игры</div>
               <input type="date" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} style={{ ...inp, colorScheme: 'dark' }} />
             </div>
-            <div>
-              <div style={labelStyle}>{AWARD_CONFIG[form.nomination]?.label}</div>
-              <input
-                type="number"
-                value={form.stat_value}
-                onChange={e => setForm(f => ({ ...f, stat_value: e.target.value }))}
-                placeholder={statPlaceholder[form.nomination]}
-                style={inp}
-              />
-            </div>
+            {form.nomination !== 'mvp' && (
+              <div>
+                <div style={labelStyle}>{AWARD_CONFIG[form.nomination]?.label}</div>
+                <input
+                  type="number"
+                  value={form.stat_value}
+                  onChange={e => setForm(f => ({ ...f, stat_value: e.target.value }))}
+                  placeholder={statPlaceholder[form.nomination]}
+                  style={inp}
+                />
+              </div>
+            )}
           </div>
 
           <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Выдать награду</button>
