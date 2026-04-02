@@ -753,7 +753,7 @@ function PlayersAdmin({ teams }) {
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                     {membership ? (
-                      <button onClick={() => removeFromTeam(membership.id)} style={{ fontSize: 11, color: '#FF8C42', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Убрать</button>
+                      <button onClick={() => removeFromTeam(membership.id)} style={{ fontSize: 11, color: '#FF8C42', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Убрать из команды</button>
                     ) : (
                       <button onClick={() => { setAddTeamId(player.id); setMemberForm({ team_id: '', jersey_number: '', is_captain: false, joined_at: today }) }} style={{ fontSize: 11, color: '#5BB849', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>+ Команда</button>
                     )}
