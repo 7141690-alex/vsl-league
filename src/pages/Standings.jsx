@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import CalendarWidget from '../components/CalendarWidget'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
-export default function Standings({ league, onSelectTeam }) {
+export default function Standings({ league, onSelectTeam, onShowAwards }) {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -140,13 +140,13 @@ export default function Standings({ league, onSelectTeam }) {
       </div>
     </div>
 
-    <AwardsWidget league={league} />
+    <AwardsWidget league={league} onShowAwards={onShowAwards} />
     <CalendarWidget league={league} />
     </>
   )
 }
 
-function AwardsWidget({ league }) {
+function AwardsWidget({ league, onShowAwards }) {
   const [awards, setAwards] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -169,9 +169,20 @@ function AwardsWidget({ league }) {
   return (
     <div style={{ marginTop: 20, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 16 }}>🏅</span>
-        <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Номинации</span>
+      <div
+        onClick={onShowAwards}
+        style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: onShowAwards ? 'pointer' : 'default', transition: 'background 0.15s' }}
+        onMouseEnter={e => { if (onShowAwards) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>🏅</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Номинации</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{awards.length}</span>
+        </div>
+        {onShowAwards && (
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>Все →</span>
+        )}
       </div>
 
       {/* Scrollable list */}

@@ -2,11 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
-function calcAge(birthDate) {
-  if (!birthDate) return null
-  return Math.floor((new Date() - new Date(birthDate)) / (365.25 * 24 * 3600 * 1000))
-}
-
 function StatPill({ label, value, accent }) {
   return (
     <div style={{ background: accent ? 'rgba(55,77,245,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${accent ? 'rgba(55,77,245,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
@@ -46,8 +41,6 @@ export default function PlayerPage({ playerId, onBack }) {
   if (!player) return null
 
   const currentMembership = memberships.find(m => !m.left_at)
-  const pastMemberships = memberships.filter(m => m.left_at)
-  const age = calcAge(player.birth_date)
   const isFemale = player.gender === 'female'
 
   return (
@@ -77,47 +70,11 @@ export default function PlayerPage({ playerId, onBack }) {
 
         {/* Stats pills */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {age && <StatPill label="Возраст" value={`${age} лет`} />}
           {player.height && <StatPill label="Рост" value={`${player.height} см`} />}
           {currentMembership && <StatPill label="Команда" value={currentMembership.teams?.name} accent />}
           <StatPill label="Наград" value={awards.length} />
         </div>
       </div>
-
-      {/* Career */}
-      {memberships.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 3, height: 16, borderRadius: 2, background: '#374DF5' }} />
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Карьера</span>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden' }}>
-            {memberships.map((m, i) => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: m.left_at ? 'rgba(255,255,255,0.2)' : '#5BB849', boxShadow: m.left_at ? 'none' : '0 0 6px #5BB849', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{m.teams?.name}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                      {m.teams?.league === 'male' ? 'Мужская' : 'Женская'} лига
-                      {m.jersey_number != null ? ` · #${m.jersey_number}` : ''}
-                      {m.is_captain ? ' · Капитан' : ''}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'right', flexShrink: 0 }}>
-                  {m.joined_at && new Date(m.joined_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  {m.left_at ? (
-                    <div>{new Date(m.left_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                  ) : (
-                    <div style={{ color: '#5BB849', fontWeight: 600 }}>сейчас</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Awards */}
       {awards.length > 0 && (

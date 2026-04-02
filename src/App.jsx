@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
 import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
 import TeamPage from './pages/TeamPage'
 import PlayerPage from './pages/PlayerPage'
+import AwardsPage from './pages/AwardsPage'
 
 const IconStandings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
@@ -29,6 +31,14 @@ const IconCalendar = () => (
 const tabs = [
   { id: 'standings', label: 'Таблица', Icon: IconStandings },
   { id: 'schedule', label: 'Расписание', Icon: IconCalendar },
+]
+
+const GENDER_ICON = { male: '♂', female: '♀', mixed: '⚥' }
+
+// Fallback лиги пока DB не загрузилась
+const DEFAULT_LEAGUES = [
+  { name: 'male', display_name: 'Мужская', gender: 'male' },
+  { name: 'female', display_name: 'Женская', gender: 'female' },
 ]
 
 function InstallBanner() {
@@ -85,11 +95,32 @@ function InstallBanner() {
 }
 
 export default function App() {
+  const [leagues, setLeagues] = useState(DEFAULT_LEAGUES)
   const [league, setLeague] = useState('male')
   const [tab, setTab] = useState('standings')
   const [showAdmin, setShowAdmin] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
+  const [showAwards, setShowAwards] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('leagues')
+      .select('*')
+      .eq('active', true)
+      .order('created_at')
+      .then(({ data }) => {
+        if (data && data.length > 0) setLeagues(data)
+      })
+  }, [])
+
+  function resetNav() {
+    setSelectedTeam(null)
+    setSelectedPlayer(null)
+    setShowAwards(false)
+  }
+
+  const currentLeague = leagues.find(l => l.name === league) || leagues[0]
 
   if (showAdmin) {
     return (
@@ -155,11 +186,11 @@ export default function App() {
           {/* League + Tabs row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, gap: 12, flexWrap: 'wrap' }}>
 
-            {/* League switcher — pill toggle */}
-            <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, gap: 2 }}>
-              {[{ id: 'male', label: '♂ Мужская' }, { id: 'female', label: '♀ Женская' }].map(l => (
-                <button key={l.id} onClick={() => { setLeague(l.id); setSelectedTeam(null); setSelectedPlayer(null) }}
-                  style={league === l.id ? {
+            {/* League switcher — dynamic from DB */}
+            <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, gap: 2, flexWrap: 'wrap' }}>
+              {leagues.map(l => (
+                <button key={l.name} onClick={() => { setLeague(l.name); resetNav() }}
+                  style={league === l.name ? {
                     background: 'linear-gradient(135deg, #374DF5, #6366f1)',
                     color: '#fff', boxShadow: '0 2px 10px rgba(55,77,245,0.45)',
                     borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 700,
@@ -169,10 +200,10 @@ export default function App() {
                     borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 600,
                     cursor: 'pointer', border: 'none', transition: 'all 0.15s',
                   }}
-                  onMouseEnter={e => { if (league !== l.id) e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}
-                  onMouseLeave={e => { if (league !== l.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
+                  onMouseEnter={e => { if (league !== l.name) e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}
+                  onMouseLeave={e => { if (league !== l.name) e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
                 >
-                  {l.label}
+                  {GENDER_ICON[l.gender] || ''} {l.display_name}
                 </button>
               ))}
             </div>
@@ -180,7 +211,7 @@ export default function App() {
             {/* Tab buttons */}
             <div style={{ display: 'flex', gap: 6 }}>
               {tabs.map(({ id, label, Icon }) => (
-                <button key={id} onClick={() => { setTab(id); setSelectedTeam(null); setSelectedPlayer(null) }}
+                <button key={id} onClick={() => { setTab(id); resetNav() }}
                   style={tab === id ? {
                     background: 'rgba(55,77,245,0.25)', color: '#fff',
                     border: '1px solid rgba(55,77,245,0.6)',
@@ -215,9 +246,21 @@ export default function App() {
           <PlayerPage playerId={selectedPlayer} onBack={() => setSelectedPlayer(null)} />
         ) : selectedTeam ? (
           <TeamPage team={selectedTeam} league={league} onBack={() => setSelectedTeam(null)} onSelectPlayer={setSelectedPlayer} />
+        ) : showAwards ? (
+          <AwardsPage
+            league={league}
+            leagueName={`${GENDER_ICON[currentLeague?.gender] || ''} ${currentLeague?.display_name || league}`}
+            onBack={() => setShowAwards(false)}
+          />
         ) : (
           <>
-            {tab === 'standings' && <Standings league={league} onSelectTeam={setSelectedTeam} />}
+            {tab === 'standings' && (
+              <Standings
+                league={league}
+                onSelectTeam={setSelectedTeam}
+                onShowAwards={() => setShowAwards(true)}
+              />
+            )}
             {tab === 'schedule' && <Schedule league={league} />}
           </>
         )}

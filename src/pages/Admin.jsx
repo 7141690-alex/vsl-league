@@ -2,16 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
-function getNextSunday() {
-  const d = new Date()
-  const day = d.getDay()
-  const daysUntilSunday = day === 0 ? 7 : 7 - day
-  d.setDate(d.getDate() + daysUntilSunday)
-  d.setHours(12, 0, 0, 0)
-  // format as datetime-local value
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+// ─── Стили ───────────────────────────────────────────────────────────────────
 
 const inp = {
   background: 'rgba(255,255,255,0.06)',
@@ -57,6 +48,41 @@ const btnSecondary = {
   flexShrink: 0,
 }
 
+const labelStyle = {
+  fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)',
+  textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+}
+
+// ─── Журнал действий ─────────────────────────────────────────────────────────
+
+async function logAction(userEmail, action, entityType, entityName, details = {}) {
+  try {
+    await supabase.from('activity_log').insert({
+      user_email: userEmail,
+      action,
+      entity_type: entityType,
+      entity_name: entityName || '',
+      details,
+    })
+  } catch {
+    // не мешаем основной операции
+  }
+}
+
+// ─── Вспомогательная функция ─────────────────────────────────────────────────
+
+function getNextSunday() {
+  const d = new Date()
+  const day = d.getDay()
+  const daysUntilSunday = day === 0 ? 7 : 7 - day
+  d.setDate(d.getDate() + daysUntilSunday)
+  d.setHours(12, 0, 0, 0)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// ─── Основной компонент Admin ─────────────────────────────────────────────────
+
 export default function Admin() {
   const [session, setSession] = useState(null)
   const [email, setEmail] = useState('')
@@ -64,6 +90,7 @@ export default function Admin() {
   const [loginError, setLoginError] = useState('')
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
+  const [leagues, setLeagues] = useState([])
   const [activeTab, setActiveTab] = useState('teams')
 
   useEffect(() => {
@@ -73,7 +100,7 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    if (session) { loadTeams(); loadMatches() }
+    if (session) { loadTeams(); loadMatches(); loadLeagues() }
   }, [session])
 
   async function login(e) {
@@ -96,6 +123,22 @@ export default function Admin() {
     setMatches(data || [])
   }
 
+  async function loadLeagues() {
+    const { data } = await supabase.from('leagues').select('*').order('created_at')
+    setLeagues(data || [])
+  }
+
+  const userEmail = session?.user?.email || ''
+
+  const TABS = [
+    { id: 'teams',   label: 'Команды' },
+    { id: 'matches', label: 'Игры' },
+    { id: 'players', label: 'Игроки' },
+    { id: 'awards',  label: '🏅 Награды' },
+    { id: 'leagues', label: '🏆 Лиги' },
+    { id: 'log',     label: '📋 Журнал' },
+  ]
+
   if (!session) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -107,24 +150,10 @@ export default function Admin() {
             </div>
           </div>
           <form onSubmit={login} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={inp}
-            />
-            <input
-              type="password"
-              placeholder="Пароль"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={inp}
-            />
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inp} />
+            <input type="password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} style={inp} />
             {loginError && <p style={{ color: '#FF495C', fontSize: 12, margin: 0 }}>{loginError}</p>}
-            <button type="submit" style={{ ...btnPrimary, marginTop: 4, width: '100%', padding: '12px 20px' }}>
-              Войти
-            </button>
+            <button type="submit" style={{ ...btnPrimary, marginTop: 4, width: '100%', padding: '12px 20px' }}>Войти</button>
           </form>
         </div>
       </div>
@@ -137,7 +166,9 @@ export default function Admin() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Панель администратора</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>VSL — Volleyball Super League</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
+            VSL — Volleyball Super League · {userEmail}
+          </div>
         </div>
         <button
           onClick={logout}
@@ -148,173 +179,224 @@ export default function Admin() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, gap: 2, marginBottom: 24 }}>
-        {[{ id: 'teams', label: 'Команды' }, { id: 'matches', label: 'Игры' }, { id: 'players', label: 'Игроки' }, { id: 'awards', label: '🏅 Награды' }].map(t => (
+      <div style={{ display: 'flex', overflowX: 'auto', gap: 2, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 3, marginBottom: 24, WebkitOverflowScrolling: 'touch' }}>
+        {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             style={activeTab === t.id ? {
               background: 'linear-gradient(135deg, #374DF5, #6366f1)',
               color: '#fff', boxShadow: '0 2px 10px rgba(55,77,245,0.45)',
-              borderRadius: 7, padding: '8px 24px', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+              borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', border: 'none', whiteSpace: 'nowrap',
             } : {
               background: 'transparent', color: 'rgba(255,255,255,0.45)',
-              borderRadius: 7, padding: '8px 24px', fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+              borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', border: 'none', whiteSpace: 'nowrap',
             }}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {activeTab === 'teams' && <TeamsAdmin teams={teams} onUpdate={loadTeams} />}
-      {activeTab === 'matches' && <MatchesAdmin matches={matches} teams={teams} onUpdate={loadMatches} />}
-      {activeTab === 'players' && <PlayersAdmin teams={teams} />}
-      {activeTab === 'awards' && <AwardsAdmin teams={teams} />}
+      {activeTab === 'teams'   && <TeamsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} onUpdate={loadTeams} />}
+      {activeTab === 'matches' && <MatchesAdmin  matches={matches} teams={teams} leagues={leagues} userEmail={userEmail} onUpdate={loadMatches} />}
+      {activeTab === 'players' && <PlayersAdmin  teams={teams}   userEmail={userEmail} />}
+      {activeTab === 'awards'  && <AwardsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} />}
+      {activeTab === 'leagues' && <LeaguesAdmin  userEmail={userEmail} onUpdate={loadLeagues} />}
+      {activeTab === 'log'     && <ActivityLog />}
     </div>
   )
 }
 
-function TeamsAdmin({ teams, onUpdate }) {
-  const [name, setName] = useState('')
-  const [league, setLeague] = useState('male')
+// ─── Команды ─────────────────────────────────────────────────────────────────
+
+function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
+  const [form, setForm] = useState({ name: '', league: 'male', photo_url: '', active: true })
   const [editingId, setEditingId] = useState(null)
-  const [editingName, setEditingName] = useState('')
+  const [editingData, setEditingData] = useState({})
+  const [showInactive, setShowInactive] = useState(false)
+
+  const leagueOptions = leagues.length > 0
+    ? leagues
+    : [{ name: 'male', display_name: 'Мужская' }, { name: 'female', display_name: 'Женская' }]
 
   async function addTeam(e) {
     e.preventDefault()
-    if (!name.trim()) return
-    await supabase.from('teams').insert({ name: name.trim(), league })
-    setName('')
+    if (!form.name.trim()) return
+    await supabase.from('teams').insert({
+      name: form.name.trim(),
+      league: form.league,
+      photo_url: form.photo_url.trim() || null,
+      active: form.active,
+    })
+    await logAction(userEmail, 'Добавлено', 'команда', form.name.trim(), { league: form.league })
+    setForm({ name: '', league: form.league, photo_url: '', active: true })
     onUpdate()
   }
 
-  async function deleteTeam(id) {
-    if (!confirm('Удалить команду?')) return
+  async function deleteTeam(id, teamName) {
+    if (!confirm(`Удалить команду «${teamName}»?`)) return
     await supabase.from('teams').delete().eq('id', id)
+    await logAction(userEmail, 'Удалено', 'команда', teamName)
     onUpdate()
   }
 
   function startEdit(team) {
     setEditingId(team.id)
-    setEditingName(team.name)
+    setEditingData({ name: team.name, league: team.league, photo_url: team.photo_url || '', active: team.active !== false })
   }
 
   async function saveEdit(id) {
-    if (!editingName.trim()) return
-    await supabase.from('teams').update({ name: editingName.trim() }).eq('id', id)
+    if (!editingData.name?.trim()) return
+    await supabase.from('teams').update({
+      name: editingData.name.trim(),
+      league: editingData.league,
+      photo_url: editingData.photo_url?.trim() || null,
+      active: editingData.active,
+    }).eq('id', id)
+    await logAction(userEmail, 'Изменено', 'команда', editingData.name.trim())
     setEditingId(null)
-    setEditingName('')
     onUpdate()
   }
 
-  function cancelEdit() {
-    setEditingId(null)
-    setEditingName('')
+  // Группируем по лиге
+  const grouped = {}
+  teams.forEach(t => {
+    const key = t.league || 'other'
+    if (!grouped[key]) grouped[key] = []
+    grouped[key].push(t)
+  })
+
+  const leagueLabel = (name) => {
+    const l = leagues.find(l => l.name === name)
+    return l ? l.display_name : name
   }
 
-  const maleTeams = teams.filter(t => t.league === 'male')
-  const femaleTeams = teams.filter(t => t.league === 'female')
+  function renderTeam(team, i) {
+    const isActive = team.active !== false
+    if (!showInactive && !isActive) return null
 
-  function renderTeamList(list) {
-    if (list.length === 0) return (
-      <div style={{ padding: '16px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет команд</div>
-    )
-    return list.map((team, i) => (
-      <div key={team.id} style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '11px 16px',
-        borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-      }}>
-        {editingId === team.id ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-            <input
-              value={editingName}
-              onChange={e => setEditingName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveEdit(team.id); if (e.key === 'Escape') cancelEdit() }}
-              autoFocus
-              style={{ ...inp, padding: '6px 12px', fontSize: 13, flex: 1 }}
-            />
-            <button onClick={() => saveEdit(team.id)} style={{ ...btnPrimary, padding: '6px 14px', fontSize: 12 }}>
-              Сохранить
-            </button>
-            <button onClick={cancelEdit} style={{ ...btnSecondary, padding: '6px 14px', fontSize: 12 }}>
-              Отмена
-            </button>
+    if (editingId === team.id) {
+      return (
+        <div key={team.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'rgba(55,77,245,0.05)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <div style={labelStyle}>Название</div>
+              <input value={editingData.name} onChange={e => setEditingData(d => ({ ...d, name: e.target.value }))} autoFocus style={{ ...inp, padding: '8px 12px', fontSize: 13 }} onKeyDown={e => { if (e.key === 'Enter') saveEdit(team.id); if (e.key === 'Escape') setEditingId(null) }} />
+            </div>
+            <div>
+              <div style={labelStyle}>Лига</div>
+              <select value={editingData.league} onChange={e => setEditingData(d => ({ ...d, league: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }}>
+                {leagueOptions.map(l => <option key={l.name} value={l.name}>{l.display_name}</option>)}
+              </select>
+            </div>
           </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#374DF5', boxShadow: '0 0 5px #374DF5', flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{team.name}</span>
-            </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={labelStyle}>Фото (путь, напр. /teams/Unity.jpg)</div>
+            <input value={editingData.photo_url} onChange={e => setEditingData(d => ({ ...d, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" checked={editingData.active} onChange={e => setEditingData(d => ({ ...d, active: e.target.checked }))} style={{ accentColor: '#5BB849', width: 15, height: 15 }} />
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Активна в текущем сезоне</span>
+            </label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => startEdit(team)} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>
-                Изменить
-              </button>
-              <button onClick={() => deleteTeam(team.id)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>
-                Удалить
-              </button>
+              <button onClick={() => saveEdit(team.id)} style={{ ...btnPrimary, padding: '7px 16px', fontSize: 12 }}>Сохранить</button>
+              <button onClick={() => setEditingId(null)} style={{ ...btnSecondary, padding: '7px 16px', fontSize: 12 }}>Отмена</button>
             </div>
-          </>
-        )}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div key={team.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', opacity: isActive ? 1 : 0.5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: isActive ? '#5BB849' : 'rgba(255,255,255,0.2)', boxShadow: isActive ? '0 0 5px #5BB849' : 'none', flexShrink: 0 }} />
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{team.name}</span>
+            {team.photo_url && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 8 }}>{team.photo_url}</span>}
+          </div>
+          {!isActive && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '2px 6px' }}>неактивна</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => startEdit(team)} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
+          <button onClick={() => deleteTeam(team.id, team.name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
+        </div>
       </div>
-    ))
+    )
   }
+
+  const inactiveCount = teams.filter(t => t.active === false).length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Add team form */}
+      {/* Форма создания */}
       <div style={{ ...card, padding: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
-          Добавить команду
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
+          Создать команду
         </div>
-        <form onSubmit={addTeam} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Название команды"
-            style={{ ...inp, flex: 1, minWidth: 180 }}
-          />
-          <select
-            value={league}
-            onChange={e => setLeague(e.target.value)}
-            style={{ ...inp, width: 'auto', flexShrink: 0 }}
-          >
-            <option value="male">Мужская</option>
-            <option value="female">Женская</option>
-          </select>
-          <button type="submit" style={btnPrimary}>Добавить</button>
+        <form onSubmit={addTeam} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Название команды</div>
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Название команды" style={inp} />
+            </div>
+            <div>
+              <div style={labelStyle}>Лига</div>
+              <select value={form.league} onChange={e => setForm(f => ({ ...f, league: e.target.value }))} style={inp}>
+                {leagueOptions.map(l => <option key={l.name} value={l.name}>{l.display_name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle}>Фото команды (путь, напр. /teams/Unity.jpg)</div>
+            <input value={form.photo_url} onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={inp} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} style={{ accentColor: '#5BB849', width: 15, height: 15 }} />
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Участвует в текущем сезоне</span>
+            </label>
+            <button type="submit" style={btnPrimary}>Создать команду</button>
+          </div>
         </form>
       </div>
 
-      {/* Male teams */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <div style={{ width: 3, height: 16, borderRadius: 2, background: '#374DF5' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>Мужская лига</span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>
-            {maleTeams.length}
-          </span>
+      {/* Переключатель неактивных */}
+      {inactiveCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setShowInactive(v => !v)}
+            style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            {showInactive ? 'Скрыть неактивные' : `Показать неактивные (${inactiveCount})`}
+          </button>
         </div>
-        <div style={card}>{renderTeamList(maleTeams)}</div>
-      </div>
+      )}
 
-      {/* Female teams */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <div style={{ width: 3, height: 16, borderRadius: 2, background: '#FF8C42' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>Женская лига</span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>
-            {femaleTeams.length}
-          </span>
+      {/* Списки по лигам */}
+      {Object.entries(grouped).map(([lgName, lgTeams]) => (
+        <div key={lgName}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 3, height: 16, borderRadius: 2, background: '#374DF5' }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{leagueLabel(lgName)}</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{lgTeams.filter(t => t.active !== false).length}</span>
+          </div>
+          <div style={card}>
+            {lgTeams.length === 0
+              ? <div style={{ padding: '16px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет команд</div>
+              : lgTeams.map((team, i) => renderTeam(team, i))
+            }
+          </div>
         </div>
-        <div style={card}>{renderTeamList(femaleTeams)}</div>
-      </div>
+      ))}
     </div>
   )
 }
 
-function MatchesAdmin({ matches, teams, onUpdate }) {
+// ─── Игры ─────────────────────────────────────────────────────────────────────
+
+function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate }) {
   const [form, setForm] = useState({
     league: 'male', home_team_id: '', away_team_id: '',
     match_date: getNextSunday(), venue: '', status: 'scheduled',
@@ -323,7 +405,13 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
   const [sets, setSets] = useState([])
   const [editId, setEditId] = useState(null)
 
+  const leagueOptions = leagues.length > 0
+    ? leagues
+    : [{ name: 'male', display_name: 'Мужская лига' }, { name: 'female', display_name: 'Женская лига' }]
+
   const leagueTeams = teams.filter(t => t.league === form.league)
+  const teamsMap = teams.reduce((acc, t) => ({ ...acc, [t.id]: t }), {})
+  const knownVenues = [...new Set(matches.map(m => m.venue).filter(Boolean))].sort()
 
   async function saveMatch(e) {
     e.preventDefault()
@@ -340,21 +428,25 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
       video_url: form.video_url || null,
     }
 
+    const home = teamsMap[form.home_team_id]?.name || '?'
+    const away = teamsMap[form.away_team_id]?.name || '?'
+    const matchName = `${home} vs ${away}`
+
     let matchId = editId
     if (editId) {
       await supabase.from('matches').update(matchData).eq('id', editId)
+      await logAction(userEmail, 'Изменено', 'игра', matchName, matchData)
     } else {
       const { data } = await supabase.from('matches').insert(matchData).select().single()
       matchId = data?.id
+      await logAction(userEmail, 'Добавлено', 'игра', matchName, matchData)
     }
 
     if (matchId && sets.length > 0) {
       await supabase.from('set_scores').delete().eq('match_id', matchId)
       const setData = sets.map((s, i) => ({
-        match_id: matchId,
-        set_number: i + 1,
-        home_points: parseInt(s.home) || 0,
-        away_points: parseInt(s.away) || 0,
+        match_id: matchId, set_number: i + 1,
+        home_points: parseInt(s.home) || 0, away_points: parseInt(s.away) || 0,
       }))
       await supabase.from('set_scores').insert(setData)
     }
@@ -387,9 +479,10 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  async function deleteMatch(id) {
+  async function deleteMatch(id, home, away) {
     if (!confirm('Удалить игру?')) return
     await supabase.from('matches').delete().eq('id', id)
+    await logAction(userEmail, 'Удалено', 'игра', `${home} vs ${away}`)
     onUpdate()
   }
 
@@ -402,27 +495,20 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
     }
   }
 
-  const teamsMap = teams.reduce((acc, t) => ({ ...acc, [t.id]: t }), {})
-  const knownVenues = [...new Set(matches.map(m => m.venue).filter(Boolean))].sort()
-
-  const labelStyle = { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Form */}
+      {/* Форма */}
       <div style={{ ...card, padding: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: editId ? '#374DF5' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 18 }}>
           {editId ? '✎ Редактировать игру' : '+ Добавить игру'}
         </div>
 
         <form onSubmit={saveMatch} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* League + Date */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <div style={labelStyle}>Лига</div>
               <select value={form.league} onChange={e => setForm(f => ({ ...f, league: e.target.value }))} style={inp}>
-                <option value="male">Мужская лига</option>
-                <option value="female">Женская лига</option>
+                {leagueOptions.map(l => <option key={l.name} value={l.name}>{l.display_name}</option>)}
               </select>
             </div>
             <div>
@@ -431,22 +517,12 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
             </div>
           </div>
 
-          {/* Venue */}
           <div>
             <div style={labelStyle}>Зал</div>
-            <input
-              value={form.venue}
-              onChange={e => setForm(f => ({ ...f, venue: e.target.value }))}
-              placeholder="Название зала"
-              list="venues-datalist"
-              style={inp}
-            />
-            <datalist id="venues-datalist">
-              {knownVenues.map(v => <option key={v} value={v} />)}
-            </datalist>
+            <input value={form.venue} onChange={e => setForm(f => ({ ...f, venue: e.target.value }))} placeholder="Название зала" list="venues-datalist" style={inp} />
+            <datalist id="venues-datalist">{knownVenues.map(v => <option key={v} value={v} />)}</datalist>
           </div>
 
-          {/* Teams */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <div style={labelStyle}>Хозяева</div>
@@ -464,7 +540,6 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
             </div>
           </div>
 
-          {/* Status + set score */}
           <div>
             <div style={labelStyle}>Статус</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -487,7 +562,6 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
             </div>
           </div>
 
-          {/* Per-set scores */}
           {form.status === 'finished' && sets.length > 0 && (
             <div>
               <div style={labelStyle}>Счёт по сетам</div>
@@ -495,54 +569,36 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
                 {sets.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', width: 48, flexShrink: 0 }}>Сет {i + 1}</span>
-                    <input type="number" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))}
-                      placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                     <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>:</span>
-                    <input type="number" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))}
-                      placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Photo & Video URLs */}
           {form.status === 'finished' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <div style={labelStyle}>📷 Фотоотчёт (ссылка)</div>
-                <input
-                  value={form.photo_url}
-                  onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))}
-                  placeholder="https://photos.google.com/..."
-                  style={inp}
-                />
+                <input value={form.photo_url} onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="https://photos.google.com/..." style={inp} />
               </div>
               <div>
                 <div style={labelStyle}>▶ Видеозапись (YouTube)</div>
-                <input
-                  value={form.video_url}
-                  onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
-                  placeholder="https://youtube.com/watch?v=..."
-                  style={inp}
-                />
+                <input value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." style={inp} />
               </div>
             </div>
           )}
 
-          {/* Buttons */}
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-            <button type="submit" style={btnPrimary}>
-              {editId ? 'Сохранить' : 'Добавить'}
-            </button>
-            {editId && (
-              <button type="button" onClick={resetForm} style={btnSecondary}>Отмена</button>
-            )}
+            <button type="submit" style={btnPrimary}>{editId ? 'Сохранить' : 'Добавить'}</button>
+            {editId && <button type="button" onClick={resetForm} style={btnSecondary}>Отмена</button>}
           </div>
         </form>
       </div>
 
-      {/* Matches list */}
+      {/* Список игр */}
       <div style={card}>
         {matches.length === 0 && (
           <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет игр</div>
@@ -552,22 +608,14 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
           const away = teamsMap[match.away_team_id]
           const finished = match.status === 'finished'
           return (
-            <div key={match.id} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '12px 16px',
-              borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-            }}>
+            <div key={match.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 5, height: 5, borderRadius: '50%', background: finished ? '#5BB849' : '#374DF5', boxShadow: `0 0 4px ${finished ? '#5BB849' : '#374DF5'}`, flexShrink: 0 }} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
                     {home?.name || '?'} <span style={{ color: 'rgba(255,255,255,0.3)' }}>vs</span> {away?.name || '?'}
                   </span>
-                  {finished && (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#5BB849' }}>
-                      {match.home_sets}:{match.away_sets}
-                    </span>
-                  )}
+                  {finished && <span style={{ fontSize: 12, fontWeight: 700, color: '#5BB849' }}>{match.home_sets}:{match.away_sets}</span>}
                 </div>
                 {match.match_date && (
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', paddingLeft: 13 }}>
@@ -576,12 +624,8 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => startEdit(match)} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>
-                  Изменить
-                </button>
-                <button onClick={() => deleteMatch(match.id)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>
-                  Удалить
-                </button>
+                <button onClick={() => startEdit(match)} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
+                <button onClick={() => deleteMatch(match.id, home?.name, away?.name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
               </div>
             </div>
           )
@@ -591,16 +635,17 @@ function MatchesAdmin({ matches, teams, onUpdate }) {
   )
 }
 
-function PlayersAdmin({ teams }) {
+// ─── Игроки ───────────────────────────────────────────────────────────────────
+
+function PlayersAdmin({ teams, userEmail }) {
   const today = new Date().toISOString().slice(0, 10)
   const [players, setPlayers] = useState([])
-  const [memberships, setMemberships] = useState({}) // player_id → membership
+  const [memberships, setMemberships] = useState({})
   const [newForm, setNewForm] = useState({ name: '', gender: 'male', height: '', birth_date: '' })
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
-  const [addTeamId, setAddTeamId] = useState(null) // player_id expanding add-to-team form
+  const [addTeamId, setAddTeamId] = useState(null)
   const [memberForm, setMemberForm] = useState({ team_id: '', jersey_number: '', is_captain: false, joined_at: today })
-  const labelStyle = { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }
 
   async function load() {
     const [{ data: pData }, { data: mData }] = await Promise.all([
@@ -619,6 +664,7 @@ function PlayersAdmin({ teams }) {
     e.preventDefault()
     if (!newForm.name.trim()) return
     await supabase.from('players').insert({ name: newForm.name.trim(), gender: newForm.gender, height: parseInt(newForm.height) || null, birth_date: newForm.birth_date || null })
+    await logAction(userEmail, 'Добавлено', 'игрок', newForm.name.trim(), { gender: newForm.gender })
     setNewForm({ name: '', gender: 'male', height: '', birth_date: '' })
     load()
   }
@@ -626,38 +672,41 @@ function PlayersAdmin({ teams }) {
   async function saveEdit(id) {
     if (!editData.name?.trim()) return
     await supabase.from('players').update({ name: editData.name.trim(), gender: editData.gender, height: parseInt(editData.height) || null, birth_date: editData.birth_date || null }).eq('id', id)
+    await logAction(userEmail, 'Изменено', 'игрок', editData.name.trim())
     setEditId(null)
     load()
   }
 
-  async function deletePlayer(id) {
-    if (!confirm('Удалить игрока? Все его членства и номинации будут удалены.')) return
+  async function deletePlayer(id, name) {
+    if (!confirm(`Удалить игрока «${name}»? Все его членства и номинации будут удалены.`)) return
     await supabase.from('players').delete().eq('id', id)
+    await logAction(userEmail, 'Удалено', 'игрок', name)
     load()
   }
 
-  async function addToTeam(playerId) {
+  async function addToTeam(playerId, playerName) {
     if (!memberForm.team_id) return
-    // Снять капитанство в команде если нужно
     if (memberForm.is_captain) {
       const { data: existing } = await supabase.from('team_memberships').select('id').eq('team_id', memberForm.team_id).eq('is_captain', true).is('left_at', null)
       if (existing?.length) await supabase.from('team_memberships').update({ is_captain: false }).in('id', existing.map(x => x.id))
     }
+    const teamName = teams.find(t => t.id === memberForm.team_id)?.name || memberForm.team_id
     await supabase.from('team_memberships').insert({ player_id: playerId, team_id: memberForm.team_id, jersey_number: parseInt(memberForm.jersey_number) || null, is_captain: memberForm.is_captain, joined_at: memberForm.joined_at || today })
+    await logAction(userEmail, 'Добавлен в команду', 'игрок', playerName, { team: teamName })
     setAddTeamId(null)
     setMemberForm({ team_id: '', jersey_number: '', is_captain: false, joined_at: today })
     load()
   }
 
-  async function removeFromTeam(membershipId) {
+  async function removeFromTeam(membershipId, playerName) {
     await supabase.from('team_memberships').update({ left_at: today }).eq('id', membershipId)
+    await logAction(userEmail, 'Убран из команды', 'игрок', playerName)
     load()
   }
 
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Create player */}
+      {/* Форма создания */}
       <div style={{ ...card, padding: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Создать игрока</div>
         <form onSubmit={createPlayer} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -688,13 +737,11 @@ function PlayersAdmin({ teams }) {
         </form>
       </div>
 
-      {/* Players list */}
+      {/* Список игроков */}
       <div style={card}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Все игроки</span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{players.length}</span>
-          </div>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Все игроки</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{players.length}</span>
         </div>
 
         {players.length === 0 ? (
@@ -704,7 +751,6 @@ function PlayersAdmin({ teams }) {
           const isEditing = editId === player.id
           const isAddingTeam = addTeamId === player.id
           const genderTeams = teams.filter(t => t.league === (player.gender === 'female' ? 'female' : 'male'))
-          const age = player.birth_date ? Math.floor((new Date() - new Date(player.birth_date)) / (365.25 * 24 * 3600 * 1000)) : null
 
           return (
             <div key={player.id} style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
@@ -737,15 +783,12 @@ function PlayersAdmin({ teams }) {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{player.name}</div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-                        {age ? `${age} лет` : ''}
-                        {age && player.height ? ' · ' : ''}
                         {player.height ? `${player.height} см` : ''}
                       </div>
                     </div>
                     {membership ? (
                       <span style={{ fontSize: 11, fontWeight: 600, color: '#5BB849', background: 'rgba(91,184,73,0.1)', border: '1px solid rgba(91,184,73,0.25)', borderRadius: 6, padding: '2px 8px', flexShrink: 0 }}>
-                        {membership.teams?.name}
-                        {membership.jersey_number != null ? ` #${membership.jersey_number}` : ''}
+                        {membership.teams?.name}{membership.jersey_number != null ? ` #${membership.jersey_number}` : ''}
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>Без команды</span>
@@ -753,17 +796,16 @@ function PlayersAdmin({ teams }) {
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                     {membership ? (
-                      <button onClick={() => removeFromTeam(membership.id)} style={{ fontSize: 11, color: '#FF8C42', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Убрать из команды</button>
+                      <button onClick={() => removeFromTeam(membership.id, player.name)} style={{ fontSize: 11, color: '#FF8C42', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Убрать из команды</button>
                     ) : (
                       <button onClick={() => { setAddTeamId(player.id); setMemberForm({ team_id: '', jersey_number: '', is_captain: false, joined_at: today }) }} style={{ fontSize: 11, color: '#5BB849', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>+ Команда</button>
                     )}
                     <button onClick={() => { setEditId(player.id); setEditData({ name: player.name, gender: player.gender || 'male', height: player.height || '', birth_date: player.birth_date || '' }) }} style={{ fontSize: 11, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
-                    <button onClick={() => deletePlayer(player.id)} style={{ fontSize: 11, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
+                    <button onClick={() => deletePlayer(player.id, player.name)} style={{ fontSize: 11, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
                   </div>
                 </div>
               )}
 
-              {/* Add to team form */}
               {isAddingTeam && (
                 <div style={{ padding: '12px 16px 16px', background: 'rgba(91,184,73,0.05)', borderTop: '1px solid rgba(91,184,73,0.15)' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Добавить в команду</div>
@@ -780,7 +822,7 @@ function PlayersAdmin({ teams }) {
                       <input type="checkbox" checked={memberForm.is_captain} onChange={e => setMemberForm(f => ({ ...f, is_captain: e.target.checked }))} style={{ accentColor: '#F5A623', width: 15, height: 15 }} />
                       <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Капитан</span>
                     </label>
-                    <button onClick={() => addToTeam(player.id)} style={{ ...btnPrimary, padding: '7px 16px', fontSize: 12 }}>Добавить</button>
+                    <button onClick={() => addToTeam(player.id, player.name)} style={{ ...btnPrimary, padding: '7px 16px', fontSize: 12 }}>Добавить</button>
                     <button onClick={() => setAddTeamId(null)} style={{ ...btnSecondary, padding: '7px 14px', fontSize: 12 }}>Отмена</button>
                   </div>
                 </div>
@@ -789,17 +831,20 @@ function PlayersAdmin({ teams }) {
           )
         })}
       </div>
-
     </div>
   )
 }
 
-function AwardsAdmin({ teams }) {
+// ─── Награды ──────────────────────────────────────────────────────────────────
+
+function AwardsAdmin({ teams, leagues, userEmail }) {
   const [form, setForm] = useState({ league: 'male', team_id: '', player_id: '', nomination: 'setter', match_date: '', stat_value: '' })
   const [players, setPlayers] = useState([])
   const [awards, setAwards] = useState([])
 
-  const labelStyle = { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }
+  const leagueOptions = leagues.length > 0
+    ? leagues
+    : [{ name: 'male', display_name: 'Мужская лига' }, { name: 'female', display_name: 'Женская лига' }]
 
   const leagueTeams = teams.filter(t => t.league === form.league)
 
@@ -822,15 +867,10 @@ function AwardsAdmin({ teams }) {
     }
   }, [form.team_id])
 
-  useEffect(() => {
-    setForm(f => ({ ...f, team_id: '', player_id: '' }))
-  }, [form.league])
+  useEffect(() => { setForm(f => ({ ...f, team_id: '', player_id: '' })) }, [form.league])
 
   async function loadAwards() {
-    const { data } = await supabase
-      .from('awards')
-      .select('*, players(name), teams(name)')
-      .order('match_date', { ascending: false })
+    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('match_date', { ascending: false })
     setAwards(data || [])
   }
 
@@ -845,13 +885,16 @@ function AwardsAdmin({ teams }) {
       match_date: form.match_date,
       stat_value: parseFloat(form.stat_value) || null,
     })
+    const playerName = players.find(p => p.id === form.player_id)?.name || form.player_id
+    await logAction(userEmail, 'Добавлено', 'награда', `${playerName} — ${AWARD_CONFIG[form.nomination]?.label}`, { nomination: form.nomination })
     setForm(f => ({ ...f, player_id: '', match_date: '', stat_value: '' }))
     loadAwards()
   }
 
-  async function deleteAward(id) {
+  async function deleteAward(id, awardInfo) {
     if (!confirm('Удалить награду?')) return
     await supabase.from('awards').delete().eq('id', id)
+    await logAction(userEmail, 'Удалено', 'награда', awardInfo)
     loadAwards()
   }
 
@@ -859,32 +902,23 @@ function AwardsAdmin({ teams }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Form */}
       <div style={{ ...card, padding: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 18 }}>
-          Выдать награду
-        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 18 }}>Выдать награду</div>
         <form onSubmit={addAward} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* League + Nomination */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <div style={labelStyle}>Лига</div>
               <select value={form.league} onChange={e => setForm(f => ({ ...f, league: e.target.value }))} style={inp}>
-                <option value="male">Мужская лига</option>
-                <option value="female">Женская лига</option>
+                {leagueOptions.map(l => <option key={l.name} value={l.name}>{l.display_name}</option>)}
               </select>
             </div>
             <div>
               <div style={labelStyle}>Номинация</div>
               <select value={form.nomination} onChange={e => setForm(f => ({ ...f, nomination: e.target.value }))} style={inp}>
-                {Object.entries(AWARD_CONFIG).map(([key, cfg]) => (
-                  <option key={key} value={key}>{cfg.label}</option>
-                ))}
+                {Object.entries(AWARD_CONFIG).map(([key, cfg]) => <option key={key} value={key}>{cfg.label}</option>)}
               </select>
             </div>
           </div>
-
-          {/* Team + Player */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <div style={labelStyle}>Команда</div>
@@ -901,8 +935,6 @@ function AwardsAdmin({ teams }) {
               </select>
             </div>
           </div>
-
-          {/* Date + Stat */}
           <div style={{ display: 'grid', gridTemplateColumns: form.nomination === 'mvp' ? '1fr' : '1fr 1fr', gap: 12 }}>
             <div>
               <div style={labelStyle}>Дата игры</div>
@@ -911,51 +943,301 @@ function AwardsAdmin({ teams }) {
             {form.nomination !== 'mvp' && (
               <div>
                 <div style={labelStyle}>{AWARD_CONFIG[form.nomination]?.label}</div>
-                <input
-                  type="number"
-                  value={form.stat_value}
-                  onChange={e => setForm(f => ({ ...f, stat_value: e.target.value }))}
-                  placeholder={statPlaceholder[form.nomination]}
-                  style={inp}
-                />
+                <input type="number" value={form.stat_value} onChange={e => setForm(f => ({ ...f, stat_value: e.target.value }))} placeholder={statPlaceholder[form.nomination]} style={inp} />
               </div>
             )}
           </div>
-
           <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Выдать награду</button>
         </form>
       </div>
 
-      {/* Awards list */}
       <div style={card}>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Все награды
         </div>
         {awards.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет наград</div>
-        ) : (
-          awards.map((a, i) => {
-            const cfg = AWARD_CONFIG[a.nomination]
-            const stat = a.stat_value != null ? `${a.stat_value}${a.nomination === 'libero' ? '%' : ` ${cfg?.statLabel}`}` : '—'
-            return (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <AwardBadge nomination={a.nomination} size={22} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{a.players?.name || '—'}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-                      {a.teams?.name} · {cfg?.label} · {stat} · {a.match_date}
-                    </div>
+        ) : awards.map((a, i) => {
+          const cfg = AWARD_CONFIG[a.nomination]
+          const stat = a.stat_value != null ? `${a.stat_value}${a.nomination === 'libero' ? '%' : ` ${cfg?.statLabel}`}` : '—'
+          const awardInfo = `${a.players?.name || '?'} — ${cfg?.label}`
+          return (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <AwardBadge nomination={a.nomination} size={22} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{a.players?.name || '—'}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+                    {a.teams?.name} · {cfg?.label} · {stat} · {a.match_date}
                   </div>
                 </div>
-                <button onClick={() => deleteAward(a.id)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px', flexShrink: 0 }}>
-                  Удалить
-                </button>
+              </div>
+              <button onClick={() => deleteAward(a.id, awardInfo)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px', flexShrink: 0 }}>Удалить</button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Лиги ─────────────────────────────────────────────────────────────────────
+
+function LeaguesAdmin({ userEmail, onUpdate }) {
+  const [leagues, setLeagues] = useState([])
+  const [form, setForm] = useState({ name: '', display_name: '', gender: 'male' })
+  const [editId, setEditId] = useState(null)
+  const [editData, setEditData] = useState({})
+
+  async function load() {
+    const { data } = await supabase.from('leagues').select('*').order('created_at')
+    setLeagues(data || [])
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function addLeague(e) {
+    e.preventDefault()
+    if (!form.name.trim() || !form.display_name.trim()) return
+    const slug = form.name.trim().toLowerCase().replace(/\s+/g, '_')
+    const { error } = await supabase.from('leagues').insert({ name: slug, display_name: form.display_name.trim(), gender: form.gender })
+    if (error) { alert('Ошибка: ' + (error.message || 'возможно, лига с таким именем уже существует')); return }
+    await logAction(userEmail, 'Добавлено', 'лига', form.display_name.trim(), { name: slug, gender: form.gender })
+    setForm({ name: '', display_name: '', gender: 'male' })
+    load()
+    onUpdate()
+  }
+
+  async function saveEdit(id) {
+    if (!editData.display_name?.trim()) return
+    await supabase.from('leagues').update({ display_name: editData.display_name.trim(), gender: editData.gender, active: editData.active }).eq('id', id)
+    await logAction(userEmail, 'Изменено', 'лига', editData.display_name.trim())
+    setEditId(null)
+    load()
+    onUpdate()
+  }
+
+  async function deleteLeague(id, name) {
+    if (!confirm(`Удалить лигу «${name}»?\n\nКоманды и игры с league="${name}" останутся в БД, но лига исчезнет из переключателя.`)) return
+    await supabase.from('leagues').delete().eq('id', id)
+    await logAction(userEmail, 'Удалено', 'лига', name)
+    load()
+    onUpdate()
+  }
+
+  const GENDER_LABELS = { male: '♂ Мужская', female: '♀ Женская', mixed: '⚥ Смешанная' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Подсказка */}
+      <div style={{ background: 'rgba(55,77,245,0.08)', border: '1px solid rgba(55,77,245,0.2)', borderRadius: 12, padding: '14px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+        <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Как работают лиги:</strong><br />
+        Системное имя (slug) используется как идентификатор в командах и играх. После создания лиги назначайте командам и играм это имя в поле «Лига».<br />
+        Пример: slug <code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: 4 }}>beach_male</code> → отображаемое название «Пляжная мужская».
+      </div>
+
+      {/* Форма создания */}
+      <div style={{ ...card, padding: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Создать лигу</div>
+        <form onSubmit={addLeague} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Системное имя (slug)</div>
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="beach_male" style={inp} />
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>Только латиница и _, без пробелов</div>
+            </div>
+            <div>
+              <div style={labelStyle}>Отображаемое название</div>
+              <input value={form.display_name} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Пляжная мужская" style={inp} />
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle}>Тип</div>
+            <select value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} style={{ ...inp, width: 'auto' }}>
+              <option value="male">♂ Мужская</option>
+              <option value="female">♀ Женская</option>
+              <option value="mixed">⚥ Смешанная</option>
+            </select>
+          </div>
+          <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Создать лигу</button>
+        </form>
+      </div>
+
+      {/* Список лиг */}
+      <div style={card}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Все лиги
+        </div>
+        {leagues.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет лиг</div>
+        ) : leagues.map((lg, i) => {
+          if (editId === lg.id) {
+            return (
+              <div key={lg.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'rgba(55,77,245,0.05)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={labelStyle}>Отображаемое название</div>
+                    <input value={editData.display_name} onChange={e => setEditData(d => ({ ...d, display_name: e.target.value }))} autoFocus style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Тип</div>
+                    <select value={editData.gender} onChange={e => setEditData(d => ({ ...d, gender: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }}>
+                      <option value="male">♂ Мужская</option>
+                      <option value="female">♀ Женская</option>
+                      <option value="mixed">⚥ Смешанная</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={editData.active !== false} onChange={e => setEditData(d => ({ ...d, active: e.target.checked }))} style={{ accentColor: '#5BB849', width: 15, height: 15 }} />
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Активна (показывать в переключателе)</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => saveEdit(lg.id)} style={{ ...btnPrimary, padding: '7px 16px', fontSize: 12 }}>Сохранить</button>
+                    <button onClick={() => setEditId(null)} style={{ ...btnSecondary, padding: '7px 16px', fontSize: 12 }}>Отмена</button>
+                  </div>
+                </div>
               </div>
             )
-          })
-        )}
+          }
+
+          return (
+            <div key={lg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', opacity: lg.active === false ? 0.5 : 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: lg.active !== false ? '#5BB849' : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{lg.display_name}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                    slug: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4 }}>{lg.name}</code>
+                    {' · '}
+                    {GENDER_LABELS[lg.gender] || lg.gender}
+                    {lg.active === false && ' · неактивна'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { setEditId(lg.id); setEditData({ display_name: lg.display_name, gender: lg.gender, active: lg.active !== false }) }} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
+                <button onClick={() => deleteLeague(lg.id, lg.display_name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
+              </div>
+            </div>
+          )
+        })}
       </div>
+    </div>
+  )
+}
+
+// ─── Журнал действий ──────────────────────────────────────────────────────────
+
+const ACTION_COLORS = {
+  'Добавлено': '#5BB849',
+  'Изменено': '#374DF5',
+  'Удалено': '#FF495C',
+  'Добавлен в команду': '#F5A623',
+  'Убран из команды': '#FF8C42',
+}
+
+function ActivityLog() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filterAction, setFilterAction] = useState('all')
+
+  useEffect(() => {
+    supabase
+      .from('activity_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(300)
+      .then(({ data }) => { setLogs(data || []); setLoading(false) })
+  }, [])
+
+  const actionTypes = ['all', ...Object.keys(ACTION_COLORS)]
+  const filtered = filterAction === 'all' ? logs : logs.filter(l => l.action === filterAction)
+
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+      <div style={{ width: 32, height: 32, border: '2px solid #374DF5', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Заголовок */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Журнал действий</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Последние {logs.length} записей</div>
+        </div>
+        {/* Фильтр по типу */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {actionTypes.map(a => (
+            <button
+              key={a}
+              onClick={() => setFilterAction(a)}
+              style={{
+                fontSize: 11, fontWeight: filterAction === a ? 700 : 600,
+                color: filterAction === a ? '#fff' : 'rgba(255,255,255,0.35)',
+                background: filterAction === a ? (ACTION_COLORS[a] ? `${ACTION_COLORS[a]}33` : 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${filterAction === a ? (ACTION_COLORS[a] || 'rgba(255,255,255,0.3)') + '55' : 'rgba(255,255,255,0.08)'}`,
+                borderRadius: 7, padding: '5px 12px', cursor: 'pointer',
+              }}
+            >
+              {a === 'all' ? 'Все' : a}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ ...card, padding: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет записей</div>
+      ) : (
+        <div style={card}>
+          {filtered.map((log, i) => {
+            const color = ACTION_COLORS[log.action] || 'rgba(255,255,255,0.4)'
+            const dt = new Date(log.created_at)
+            const dateStr = dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+            const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+            return (
+              <div
+                key={log.id}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12,
+                  padding: '10px 16px',
+                  borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                }}
+              >
+                {/* Цветная полоска действия */}
+                <div style={{ width: 3, minHeight: 36, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
+
+                {/* Основная инфо */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color, background: `${color}1a`, border: `1px solid ${color}33`, borderRadius: 5, padding: '1px 8px', flexShrink: 0 }}>
+                      {log.action}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>
+                      {log.entity_type}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {log.entity_name}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>
+                    {log.user_email}
+                  </div>
+                </div>
+
+                {/* Время */}
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textAlign: 'right', flexShrink: 0 }}>
+                  <div>{dateStr}</div>
+                  <div>{timeStr}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
