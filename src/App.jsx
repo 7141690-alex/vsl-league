@@ -185,19 +185,20 @@ export default function App() {
           </div>
 
           {/* League + Tabs row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, gap: 8, flexWrap: 'nowrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
 
             {/* League dropdown */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 onClick={() => setLeagueDropdownOpen(v => !v)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  display: 'flex', alignItems: 'center', gap: 6,
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
-                  borderRadius: 10, padding: '8px 14px', cursor: 'pointer', transition: 'all 0.15s',
+                  borderRadius: 10, padding: '7px 12px', cursor: 'pointer', transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
                   {GENDER_ICON[currentLeague?.gender] || ''} {currentLeague?.display_name || 'Лига'}
                 </span>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.2s', transform: leagueDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}>
@@ -252,22 +253,22 @@ export default function App() {
             </div>
 
             {/* Tab buttons */}
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
               {tabs.map(({ id, label, Icon }) => (
                 <button key={id} onClick={() => { setTab(id); resetNav() }}
                   style={tab === id ? {
                     background: 'rgba(55,77,245,0.25)', color: '#fff',
                     border: '1px solid rgba(55,77,245,0.6)',
                     boxShadow: '0 2px 12px rgba(55,77,245,0.3)',
-                    borderRadius: 9, padding: '8px 18px',
-                    fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
-                    display: 'flex', alignItems: 'center',
+                    borderRadius: 9, padding: '7px 14px',
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
                   } : {
                     background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)',
                     border: '1px solid rgba(255,255,255,0.09)',
-                    borderRadius: 9, padding: '8px 18px',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                    display: 'flex', alignItems: 'center',
+                    borderRadius: 9, padding: '7px 14px',
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={e => { if (tab !== id) { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}}
                   onMouseLeave={e => { if (tab !== id) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}}
