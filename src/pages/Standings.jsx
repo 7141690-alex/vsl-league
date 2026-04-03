@@ -178,7 +178,7 @@ function AwardsWidget({ league, seasonId, onShowAwards, onSelectPlayer }) {
         .from('awards')
         .select('*, players(name), teams(name)')
         .eq('league', league)
-        .order('match_date', { ascending: false })
+        .order('created_at', { ascending: false })
       const all = data || []
       setAwards(seasonId ? all.filter(a => a.season_id === seasonId) : all)
       setLoading(false)
