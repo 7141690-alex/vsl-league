@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
+const POSITIONS = [
+  { key: 'setter', label: 'Связующий' },
+  { key: 'outside', label: 'Доигровщик' },
+  { key: 'opposite', label: 'Диагональный' },
+  { key: 'middle', label: 'Центральный блокирующий' },
+  { key: 'libero', label: 'Либеро' },
+]
+
 // ─── Стили ───────────────────────────────────────────────────────────────────
 
 const inp = {
@@ -249,7 +257,7 @@ export default function Admin() {
 // ─── Команды ─────────────────────────────────────────────────────────────────
 
 function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
-  const [form, setForm] = useState({ name: '', league: 'male', photo_url: '', active: true })
+  const [form, setForm] = useState({ name: '', league: 'male', photo_url: '', instagram_url: '', active: true })
   const [editingId, setEditingId] = useState(null)
   const [editingData, setEditingData] = useState({})
   const [showInactive, setShowInactive] = useState(false)
@@ -289,6 +297,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
       name: form.name.trim(),
       league: form.league,
       photo_url: form.photo_url.trim() || null,
+      instagram_url: form.instagram_url.trim() || null,
     }
     // active может отсутствовать в старых БД — добавляем только если поле существует
     try {
@@ -308,7 +317,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
       return
     }
     await logAction(userEmail, 'Добавлено', 'команда', form.name.trim(), { league: form.league })
-    setForm({ name: '', league: form.league, photo_url: '', active: true })
+    setForm({ name: '', league: form.league, photo_url: '', instagram_url: '', active: true })
     onUpdate()
   }
 
@@ -321,7 +330,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
 
   function startEdit(team) {
     setEditingId(team.id)
-    setEditingData({ name: team.name, league: team.league, photo_url: team.photo_url || '', active: team.active !== false })
+    setEditingData({ name: team.name, league: team.league, photo_url: team.photo_url || '', instagram_url: team.instagram_url || '', active: team.active !== false })
   }
 
   async function saveEdit(id) {
@@ -330,6 +339,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
       name: editingData.name.trim(),
       league: editingData.league,
       photo_url: editingData.photo_url?.trim() || null,
+      instagram_url: editingData.instagram_url?.trim() || null,
       active: editingData.active,
     }).eq('id', id)
     await logAction(userEmail, 'Изменено', 'команда', editingData.name.trim())
@@ -369,9 +379,15 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
               </select>
             </div>
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <div style={labelStyle}>Фото (путь, напр. /teams/Unity.jpg)</div>
-            <input value={editingData.photo_url} onChange={e => setEditingData(d => ({ ...d, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <div style={labelStyle}>Фото (путь, напр. /teams/Unity.jpg)</div>
+              <input value={editingData.photo_url} onChange={e => setEditingData(d => ({ ...d, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+            </div>
+            <div>
+              <div style={labelStyle}>Instagram (ссылка, опционально)</div>
+              <input value={editingData.instagram_url} onChange={e => setEditingData(d => ({ ...d, instagram_url: e.target.value }))} placeholder="https://instagram.com/team" style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -434,9 +450,15 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
               </select>
             </div>
           </div>
-          <div>
-            <div style={labelStyle}>Фото команды (путь, напр. /teams/Unity.jpg)</div>
-            <input value={form.photo_url} onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={inp} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Фото команды (путь, напр. /teams/Unity.jpg)</div>
+              <input value={form.photo_url} onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={inp} />
+            </div>
+            <div>
+              <div style={labelStyle}>Instagram (ссылка, опционально)</div>
+              <input value={form.instagram_url} onChange={e => setForm(f => ({ ...f, instagram_url: e.target.value }))} placeholder="https://instagram.com/team" style={inp} />
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -744,7 +766,8 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
   const today = new Date().toISOString().slice(0, 10)
   const [players, setPlayers] = useState([])
   const [memberships, setMemberships] = useState({})
-  const [newForm, setNewForm] = useState({ name: '', gender: 'male', height: '', birth_date: '' })
+  const [newForm, setNewForm] = useState({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '' })
+  const [genderFilter, setGenderFilter] = useState('all')
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [addTeamId, setAddTeamId] = useState(null)
@@ -772,15 +795,15 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
   async function createPlayer(e) {
     e.preventDefault()
     if (!newForm.name.trim()) return
-    await supabase.from('players').insert({ name: newForm.name.trim(), gender: newForm.gender, height: parseInt(newForm.height) || null, birth_date: newForm.birth_date || null })
+    await supabase.from('players').insert({ name: newForm.name.trim(), gender: newForm.gender, height: parseInt(newForm.height) || null, birth_date: newForm.birth_date || null, position: newForm.position || null, position2: newForm.position2 || null, photo_url: newForm.photo_url.trim() || null })
     await logAction(userEmail, 'Добавлено', 'игрок', newForm.name.trim(), { gender: newForm.gender })
-    setNewForm({ name: '', gender: 'male', height: '', birth_date: '' })
+    setNewForm({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '' })
     load()
   }
 
   async function saveEdit(id) {
     if (!editData.name?.trim()) return
-    await supabase.from('players').update({ name: editData.name.trim(), gender: editData.gender, height: parseInt(editData.height) || null, birth_date: editData.birth_date || null }).eq('id', id)
+    await supabase.from('players').update({ name: editData.name.trim(), gender: editData.gender, height: parseInt(editData.height) || null, birth_date: editData.birth_date || null, position: editData.position || null, position2: editData.position2 || null, photo_url: editData.photo_url?.trim() || null }).eq('id', id)
     await logAction(userEmail, 'Изменено', 'игрок', editData.name.trim())
     setEditId(null)
     load()
@@ -851,20 +874,51 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
               <input type="number" value={newForm.height} onChange={e => setNewForm(f => ({ ...f, height: e.target.value }))} placeholder="185" style={inp} />
             </div>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Основное амплуа</div>
+              <select value={newForm.position} onChange={e => setNewForm(f => ({ ...f, position: e.target.value }))} style={inp}>
+                <option value="">— не указано —</option>
+                {POSITIONS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>Дополнительное амплуа</div>
+              <select value={newForm.position2} onChange={e => setNewForm(f => ({ ...f, position2: e.target.value }))} style={inp}>
+                <option value="">— не указано —</option>
+                {POSITIONS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle}>Фото игрока (URL, опционально)</div>
+            <input value={newForm.photo_url} onChange={e => setNewForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="https://..." style={inp} />
+          </div>
           <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Создать</button>
         </form>
       </div>
 
       {/* Список игроков */}
       <div style={card}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Все игроки</span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{players.length}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            {[{ key: 'all', label: 'Все' }, { key: 'male', label: '♂ Мужчины' }, { key: 'female', label: '♀ Женщины' }].map(f => (
+              <button key={f.key} onClick={() => setGenderFilter(f.key)}
+                style={{ fontSize: 11, fontWeight: genderFilter === f.key ? 700 : 600, color: genderFilter === f.key ? '#fff' : 'rgba(255,255,255,0.4)', background: genderFilter === f.key ? 'rgba(55,77,245,0.25)' : 'rgba(255,255,255,0.05)', border: genderFilter === f.key ? '1px solid rgba(55,77,245,0.5)' : '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {players.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет игроков</div>
-        ) : players.map((player, i) => {
+        {(() => {
+          const filtered = genderFilter === 'all' ? players : players.filter(p => p.gender === genderFilter)
+          if (filtered.length === 0) return (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет игроков</div>
+          )
+          return filtered.map((player, i) => {
           const membership = memberships[player.id]
           const isEditing = editId === player.id
           const isAddingTeam = addTeamId === player.id
@@ -886,6 +940,26 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div><div style={labelStyle}>Дата рождения</div><input type="date" value={editData.birth_date} onChange={e => setEditData(d => ({ ...d, birth_date: e.target.value }))} style={{ ...inp, colorScheme: 'dark', padding: '8px 12px', fontSize: 13 }} /></div>
                     <div><div style={labelStyle}>Рост (см)</div><input type="number" value={editData.height} onChange={e => setEditData(d => ({ ...d, height: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }} /></div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <div style={labelStyle}>Основное амплуа</div>
+                      <select value={editData.position || ''} onChange={e => setEditData(d => ({ ...d, position: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }}>
+                        <option value="">— не указано —</option>
+                        {POSITIONS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div style={labelStyle}>Дополнительное амплуа</div>
+                      <select value={editData.position2 || ''} onChange={e => setEditData(d => ({ ...d, position2: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }}>
+                        <option value="">— не указано —</option>
+                        {POSITIONS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Фото игрока (URL, опционально)</div>
+                    <input value={editData.photo_url || ''} onChange={e => setEditData(d => ({ ...d, photo_url: e.target.value }))} placeholder="https://..." style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => saveEdit(player.id)} style={{ ...btnPrimary, padding: '7px 16px', fontSize: 12 }}>Сохранить</button>
@@ -918,7 +992,7 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
                     ) : (
                       <button onClick={() => { setAddTeamId(player.id); setMemberForm({ team_id: '', jersey_number: '', is_captain: false, joined_at: today }) }} style={{ fontSize: 11, color: '#5BB849', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>+ Команда</button>
                     )}
-                    <button onClick={() => { setEditId(player.id); setEditData({ name: player.name, gender: player.gender || 'male', height: player.height || '', birth_date: player.birth_date || '' }) }} style={{ fontSize: 11, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
+                    <button onClick={() => { setEditId(player.id); setEditData({ name: player.name, gender: player.gender || 'male', height: player.height || '', birth_date: player.birth_date || '', position: player.position || '', position2: player.position2 || '', photo_url: player.photo_url || '' }) }} style={{ fontSize: 11, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
                     <button onClick={() => deletePlayer(player.id, player.name)} style={{ fontSize: 11, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
                   </div>
                 </div>
@@ -947,7 +1021,8 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
               )}
             </div>
           )
-        })}
+        })
+        })()}
       </div>
     </div>
   )
@@ -1106,7 +1181,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
 
 function LeaguesAdmin({ userEmail, onUpdate }) {
   const [leagues, setLeagues] = useState([])
-  const [form, setForm] = useState({ name: '', display_name: '', gender: 'male' })
+  const [form, setForm] = useState({ name: '', display_name: '', gender: 'male', playoff_spots: 3, relegation_spots: 2 })
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
 
@@ -1131,17 +1206,17 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
     e.preventDefault()
     if (!form.name.trim() || !form.display_name.trim()) return
     const slug = form.name.trim().toLowerCase().replace(/\s+/g, '_')
-    const { error } = await supabase.from('leagues').insert({ name: slug, display_name: form.display_name.trim(), gender: form.gender })
+    const { error } = await supabase.from('leagues').insert({ name: slug, display_name: form.display_name.trim(), gender: form.gender, playoff_spots: parseInt(form.playoff_spots) || 3, relegation_spots: parseInt(form.relegation_spots) || 2 })
     if (error) { alert('Ошибка: ' + (error.message || 'возможно, лига с таким именем уже существует')); return }
     await logAction(userEmail, 'Добавлено', 'лига', form.display_name.trim(), { name: slug, gender: form.gender })
-    setForm({ name: '', display_name: '', gender: 'male' })
+    setForm({ name: '', display_name: '', gender: 'male', playoff_spots: 3, relegation_spots: 2 })
     load()
     onUpdate()
   }
 
   async function saveEdit(id) {
     if (!editData.display_name?.trim()) return
-    await supabase.from('leagues').update({ display_name: editData.display_name.trim(), gender: editData.gender, active: editData.active }).eq('id', id)
+    await supabase.from('leagues').update({ display_name: editData.display_name.trim(), gender: editData.gender, active: editData.active, playoff_spots: parseInt(editData.playoff_spots) || 3, relegation_spots: parseInt(editData.relegation_spots) || 2 }).eq('id', id)
     await logAction(userEmail, 'Изменено', 'лига', editData.display_name.trim())
     setEditId(null)
     load()
@@ -1182,13 +1257,24 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
               <input value={form.display_name} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Пляжная мужская" style={inp} />
             </div>
           </div>
-          <div>
-            <div style={labelStyle}>Тип</div>
-            <select value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} style={{ ...inp, width: 'auto' }}>
-              <option value="male">♂ Мужская</option>
-              <option value="female">♀ Женская</option>
-              <option value="mixed">⚥ Смешанная</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px', gap: 12, alignItems: 'end' }}>
+            <div>
+              <div style={labelStyle}>Тип</div>
+              <select value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} style={inp}>
+                <option value="male">♂ Мужская</option>
+                <option value="female">♀ Женская</option>
+                <option value="mixed">⚥ Смешанная</option>
+              </select>
+            </div>
+            <div />
+            <div>
+              <div style={labelStyle}>Плей-офф</div>
+              <input type="number" min="0" value={form.playoff_spots} onChange={e => setForm(f => ({ ...f, playoff_spots: e.target.value }))} style={inp} />
+            </div>
+            <div>
+              <div style={labelStyle}>Вылет</div>
+              <input type="number" min="0" value={form.relegation_spots} onChange={e => setForm(f => ({ ...f, relegation_spots: e.target.value }))} style={inp} />
+            </div>
           </div>
           <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Создать лигу</button>
         </form>
@@ -1205,7 +1291,7 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
           if (editId === lg.id) {
             return (
               <div key={lg.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'rgba(55,77,245,0.05)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px', gap: 10, marginBottom: 10 }}>
                   <div>
                     <div style={labelStyle}>Отображаемое название</div>
                     <input value={editData.display_name} onChange={e => setEditData(d => ({ ...d, display_name: e.target.value }))} autoFocus style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
@@ -1217,6 +1303,14 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
                       <option value="female">♀ Женская</option>
                       <option value="mixed">⚥ Смешанная</option>
                     </select>
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Плей-офф</div>
+                    <input type="number" min="0" value={editData.playoff_spots ?? 3} onChange={e => setEditData(d => ({ ...d, playoff_spots: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Вылет</div>
+                    <input type="number" min="0" value={editData.relegation_spots ?? 2} onChange={e => setEditData(d => ({ ...d, relegation_spots: e.target.value }))} style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
@@ -1250,7 +1344,7 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <button onClick={() => moveLeague(i, -1)} disabled={i === 0} style={{ fontSize: 14, color: i === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', padding: '4px 6px', lineHeight: 1 }}>↑</button>
                 <button onClick={() => moveLeague(i, 1)} disabled={i === leagues.length - 1} style={{ fontSize: 14, color: i === leagues.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: i === leagues.length - 1 ? 'default' : 'pointer', padding: '4px 6px', lineHeight: 1 }}>↓</button>
-                <button onClick={() => { setEditId(lg.id); setEditData({ display_name: lg.display_name, gender: lg.gender, active: lg.active !== false }) }} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
+                <button onClick={() => { setEditId(lg.id); setEditData({ display_name: lg.display_name, gender: lg.gender, active: lg.active !== false, playoff_spots: lg.playoff_spots ?? 3, relegation_spots: lg.relegation_spots ?? 2 }) }} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
                 <button onClick={() => deleteLeague(lg.id, lg.display_name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
               </div>
             </div>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
+const POSITION_LABEL = { setter: 'Связующий', outside: 'Доигровщик', opposite: 'Диагональный', middle: 'Центральный блокирующий', libero: 'Либеро' }
+
 function StatPill({ label, value, accent }) {
   return (
     <div style={{ background: accent ? 'rgba(55,77,245,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${accent ? 'rgba(55,77,245,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
@@ -52,13 +54,34 @@ export default function PlayerPage({ playerId, onBack }) {
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-          <span style={{ fontSize: 18, color: isFemale ? '#f472b6' : '#60a5fa', fontWeight: 700, lineHeight: 1 }}>
-            {isFemale ? '♀' : '♂'}
-          </span>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.1 }}>
-            {player.name}
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 12 }}>
+          {player.photo_url && (
+            <img src={player.photo_url} alt={player.name} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+          )}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: 18, color: isFemale ? '#f472b6' : '#60a5fa', fontWeight: 700, lineHeight: 1 }}>
+                {isFemale ? '♀' : '♂'}
+              </span>
+              <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.1 }}>
+                {player.name}
+              </h1>
+            </div>
+            {(player.position || player.position2) && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                {player.position && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#7b93ff', background: 'rgba(55,77,245,0.15)', border: '1px solid rgba(55,77,245,0.3)', borderRadius: 6, padding: '2px 8px' }}>
+                    {POSITION_LABEL[player.position] || player.position}
+                  </span>
+                )}
+                {player.position2 && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '2px 8px' }}>
+                    {POSITION_LABEL[player.position2] || player.position2}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Badges row */}

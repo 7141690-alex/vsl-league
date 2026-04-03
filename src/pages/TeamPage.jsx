@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
+const POSITION_SHORT = { setter: 'Свз', outside: 'Дойг', opposite: 'Диаг', middle: 'ЦБ', libero: 'Либ' }
+
 function SectionHeader({ icon, title, accent, count, countLabel }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -122,7 +124,7 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
       setLoading(true)
 
       let memberQuery = supabase.from('team_memberships')
-        .select('id, jersey_number, is_captain, player_id, players(id, name, height, birth_date, gender)')
+        .select('id, jersey_number, is_captain, player_id, players(id, name, height, birth_date, gender, position, position2, photo_url)')
         .eq('team_id', team.id)
         .order('jersey_number', { ascending: true, nullsFirst: false })
       memberQuery = seasonId ? memberQuery.eq('season_id', seasonId) : memberQuery.is('left_at', null)
@@ -209,11 +211,24 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
               src={team.photo_url}
               alt={team.name}
               onClick={() => setPhotoOpen(true)}
-              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', cursor: 'zoom-in', flexShrink: 0 }}
+              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.15)', cursor: 'zoom-in', flexShrink: 0 }}
             />
           )}
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: '0 0 5px' }}>{team.name}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+              <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>{team.name}</h1>
+              {team.instagram_url && (
+                <a href={team.instagram_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: 'rgba(225,48,108,0.15)', border: '1px solid rgba(225,48,108,0.3)', flexShrink: 0, textDecoration: 'none' }}
+                  title="Instagram">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <rect x="2" y="2" width="20" height="20" rx="5" stroke="#e1306c" strokeWidth="1.8"/>
+                    <circle cx="12" cy="12" r="4.5" stroke="#e1306c" strokeWidth="1.8"/>
+                    <circle cx="17.5" cy="6.5" r="1" fill="#e1306c"/>
+                  </svg>
+                </a>
+              )}
+            </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
               {league === 'male' ? '♂ Мужская лига' : '♀ Женская лига'}
             </div>
@@ -280,6 +295,16 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
                   {(awardsMap[m.player_id] || []).map((nom, idx) => (
                     <AwardBadge key={idx} nomination={nom} size={16} />
                   ))}
+                  {p.position && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+                      {POSITION_SHORT[p.position] || p.position}
+                    </span>
+                  )}
+                  {p.position2 && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+                      {POSITION_SHORT[p.position2] || p.position2}
+                    </span>
+                  )}
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   {p.height ? (

@@ -6,11 +6,16 @@ import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 export default function Standings({ league, seasonId, onSelectTeam, onShowAwards, onSelectPlayer }) {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
+  const [leagueConfig, setLeagueConfig] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
+
+      // Конфиг лиги (зоны)
+      const { data: lgData } = await supabase.from('leagues').select('playoff_spots, relegation_spots').eq('name', league).single()
+      setLeagueConfig(lgData)
 
       // Команды: если есть сезон — получаем team_id из season_teams, затем загружаем команды по id
       let teamsPromise
@@ -70,9 +75,12 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
     <div className="text-center py-20 text-white/40">Команды не добавлены</div>
   )
 
+  const playoffSpots = leagueConfig?.playoff_spots ?? 3
+  const relegationSpots = leagueConfig?.relegation_spots ?? 2
+
   const zoneColor = (i) => {
-    if (i < 3) return '#374DF5'
-    if (i >= standings.length - 2) return '#FF495C'
+    if (i < playoffSpots) return '#374DF5'
+    if (relegationSpots > 0 && i >= standings.length - relegationSpots) return '#FF495C'
     return 'transparent'
   }
 
