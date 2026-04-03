@@ -988,7 +988,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
   useEffect(() => { setForm(f => ({ ...f, team_id: '', player_id: '' })) }, [form.league])
 
   async function loadAwards() {
-    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('created_at', { ascending: false })
+    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('match_date', { ascending: false })
     const all = data || []
     setAwards(adminSeason ? all.filter(a => a.season_id === adminSeason.id) : all)
   }
@@ -996,7 +996,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
   async function addAward(e) {
     e.preventDefault()
     if (!form.player_id || !form.match_date) return
-    await supabase.from('awards').insert({
+    const { error } = await supabase.from('awards').insert({
       player_id: form.player_id,
       team_id: form.team_id,
       league: form.league,
@@ -1005,6 +1005,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
       stat_value: parseFloat(form.stat_value) || null,
       ...(adminSeason ? { season_id: adminSeason.id } : {}),
     })
+    if (error) { alert('Ошибка: ' + error.message); return }
     const playerName = players.find(p => p.id === form.player_id)?.name || form.player_id
     await logAction(userEmail, 'Добавлено', 'награда', `${playerName} — ${AWARD_CONFIG[form.nomination]?.label}`, { nomination: form.nomination })
     setForm(f => ({ ...f, player_id: '', match_date: '', stat_value: '' }))
