@@ -966,7 +966,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
 
   const leagueTeams = teams.filter(t => t.league === form.league)
 
-  useEffect(() => { loadAwards() }, [])
+  useEffect(() => { loadAwards() }, [adminSeason?.id])
 
   useEffect(() => {
     if (form.team_id) {
@@ -989,7 +989,8 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
 
   async function loadAwards() {
     const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('match_date', { ascending: false })
-    setAwards(data || [])
+    const all = data || []
+    setAwards(adminSeason ? all.filter(a => a.season_id === adminSeason.id) : all)
   }
 
   async function addAward(e) {
