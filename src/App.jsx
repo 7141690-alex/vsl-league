@@ -263,7 +263,7 @@ export default function App() {
         {selectedPlayer ? (
           <PlayerPage playerId={selectedPlayer} onBack={() => setSelectedPlayer(null)} />
         ) : selectedTeam ? (
-          <TeamPage team={selectedTeam} league={league} onBack={() => setSelectedTeam(null)} onSelectPlayer={setSelectedPlayer} />
+          <TeamPage team={selectedTeam} league={league} seasonId={seasonId} onBack={() => setSelectedTeam(null)} onSelectPlayer={setSelectedPlayer} />
         ) : showAwards ? (
           <AwardsPage
             league={league}

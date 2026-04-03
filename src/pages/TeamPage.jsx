@@ -109,7 +109,7 @@ function MatchRow({ match, teamId, teams }) {
   )
 }
 
-export default function TeamPage({ team, league, onBack, onSelectPlayer }) {
+export default function TeamPage({ team, league, seasonId, onBack, onSelectPlayer }) {
   const [players, setPlayers] = useState([])
   const [matches, setMatches] = useState([])
   const [teams, setTeams] = useState({})
@@ -120,17 +120,23 @@ export default function TeamPage({ team, league, onBack, onSelectPlayer }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
+
+      let memberQuery = supabase.from('team_memberships')
+        .select('id, jersey_number, is_captain, player_id, players(id, name, height, birth_date, gender)')
+        .eq('team_id', team.id)
+        .order('jersey_number', { ascending: true, nullsFirst: false })
+      memberQuery = seasonId ? memberQuery.eq('season_id', seasonId) : memberQuery.is('left_at', null)
+
+      let matchQuery = supabase.from('matches')
+        .select('*, set_scores(*)')
+        .eq('league', league)
+        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+        .order('match_date')
+      if (seasonId) matchQuery = matchQuery.eq('season_id', seasonId)
+
       const [{ data: membershipsData }, { data: matchesData }, { data: teamsData }, { data: awardsData }] = await Promise.all([
-        supabase.from('team_memberships')
-          .select('id, jersey_number, is_captain, player_id, players(id, name, height, birth_date, gender)')
-          .eq('team_id', team.id)
-          .is('left_at', null)
-          .order('jersey_number', { ascending: true, nullsFirst: false }),
-        supabase.from('matches')
-          .select('*, set_scores(*)')
-          .eq('league', league)
-          .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-          .order('match_date'),
+        memberQuery,
+        matchQuery,
         supabase.from('teams').select('*').eq('league', league),
         supabase.from('awards').select('player_id, nomination').eq('team_id', team.id),
       ])
@@ -146,7 +152,7 @@ export default function TeamPage({ team, league, onBack, onSelectPlayer }) {
       setLoading(false)
     }
     load()
-  }, [team.id, league])
+  }, [team.id, league, seasonId])
 
   const pastMatches = matches
     .filter(m => m.status === 'finished')

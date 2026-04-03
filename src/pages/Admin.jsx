@@ -237,7 +237,7 @@ export default function Admin() {
 
       {activeTab === 'teams'   && <TeamsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} onUpdate={loadTeams} adminSeason={adminSeason} />}
       {activeTab === 'matches' && <MatchesAdmin  matches={matches} teams={teams} leagues={leagues} userEmail={userEmail} onUpdate={loadMatches} adminSeason={adminSeason} />}
-      {activeTab === 'players' && <PlayersAdmin  teams={teams}   userEmail={userEmail} />}
+      {activeTab === 'players' && <PlayersAdmin  teams={teams}   userEmail={userEmail} adminSeason={adminSeason} />}
       {activeTab === 'awards'  && <AwardsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} adminSeason={adminSeason} />}
       {activeTab === 'leagues' && <LeaguesAdmin  userEmail={userEmail} onUpdate={loadLeagues} />}
       {activeTab === 'seasons' && <SeasonsAdmin  userEmail={userEmail} onUpdate={loadSeasons} />}
@@ -738,7 +738,7 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
 
 // ─── Игроки ───────────────────────────────────────────────────────────────────
 
-function PlayersAdmin({ teams, userEmail }) {
+function PlayersAdmin({ teams, userEmail, adminSeason }) {
   const today = new Date().toISOString().slice(0, 10)
   const [players, setPlayers] = useState([])
   const [memberships, setMemberships] = useState({})
@@ -749,9 +749,15 @@ function PlayersAdmin({ teams, userEmail }) {
   const [memberForm, setMemberForm] = useState({ team_id: '', jersey_number: '', is_captain: false, joined_at: today })
 
   async function load() {
+    let memberQuery = supabase.from('team_memberships').select('*, teams(name, league)')
+    if (adminSeason?.id) {
+      memberQuery = memberQuery.eq('season_id', adminSeason.id)
+    } else {
+      memberQuery = memberQuery.is('left_at', null)
+    }
     const [{ data: pData }, { data: mData }] = await Promise.all([
       supabase.from('players').select('*').order('name'),
-      supabase.from('team_memberships').select('*, teams(name, league)').is('left_at', null),
+      memberQuery,
     ])
     setPlayers(pData || [])
     const map = {}
@@ -759,7 +765,7 @@ function PlayersAdmin({ teams, userEmail }) {
     setMemberships(map)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [adminSeason?.id])
 
   async function createPlayer(e) {
     e.preventDefault()
@@ -788,20 +794,29 @@ function PlayersAdmin({ teams, userEmail }) {
   async function addToTeam(playerId, playerName) {
     if (!memberForm.team_id) return
     if (memberForm.is_captain) {
-      const { data: existing } = await supabase.from('team_memberships').select('id').eq('team_id', memberForm.team_id).eq('is_captain', true).is('left_at', null)
+      let capQuery = supabase.from('team_memberships').select('id').eq('team_id', memberForm.team_id).eq('is_captain', true)
+      capQuery = adminSeason?.id ? capQuery.eq('season_id', adminSeason.id) : capQuery.is('left_at', null)
+      const { data: existing } = await capQuery
       if (existing?.length) await supabase.from('team_memberships').update({ is_captain: false }).in('id', existing.map(x => x.id))
     }
     const teamName = teams.find(t => t.id === memberForm.team_id)?.name || memberForm.team_id
-    await supabase.from('team_memberships').insert({ player_id: playerId, team_id: memberForm.team_id, jersey_number: parseInt(memberForm.jersey_number) || null, is_captain: memberForm.is_captain, joined_at: memberForm.joined_at || today })
-    await logAction(userEmail, 'Добавлен в команду', 'игрок', playerName, { team: teamName })
+    const insertData = {
+      player_id: playerId, team_id: memberForm.team_id,
+      jersey_number: parseInt(memberForm.jersey_number) || null,
+      is_captain: memberForm.is_captain,
+      joined_at: memberForm.joined_at || today,
+      ...(adminSeason?.id ? { season_id: adminSeason.id } : {}),
+    }
+    await supabase.from('team_memberships').insert(insertData)
+    await logAction(userEmail, 'Добавлен в команду', 'игрок', playerName, { team: teamName, season: adminSeason?.name })
     setAddTeamId(null)
     setMemberForm({ team_id: '', jersey_number: '', is_captain: false, joined_at: today })
     load()
   }
 
   async function removeFromTeam(membershipId, playerName) {
-    await supabase.from('team_memberships').update({ left_at: today }).eq('id', membershipId)
-    await logAction(userEmail, 'Убран из команды', 'игрок', playerName)
+    await supabase.from('team_memberships').delete().eq('id', membershipId)
+    await logAction(userEmail, 'Убран из команды', 'игрок', playerName, { season: adminSeason?.name })
     load()
   }
 
