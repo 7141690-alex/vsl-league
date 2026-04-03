@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 
-export default function CalendarWidget({ league }) {
+export default function CalendarWidget({ league, seasonId }) {
   const [today] = useState(new Date())
   const [current, setCurrent] = useState({ year: new Date().getFullYear(), month: new Date().getMonth() })
   const [matches, setMatches] = useState([])
@@ -20,11 +20,12 @@ export default function CalendarWidget({ league }) {
         supabase.from('matches').select('*, set_scores(*)').eq('league', league),
         supabase.from('teams').select('*').eq('league', league),
       ])
-      setMatches(matchesData || [])
+      const all = matchesData || []
+      setMatches(seasonId ? all.filter(m => m.season_id === seasonId) : all)
       setTeams((teamsData || []).reduce((a, t) => ({ ...a, [t.id]: t }), {}))
     }
     load()
-  }, [league])
+  }, [league, seasonId])
 
   // Group matches by date key "YYYY-MM-DD"
   const matchesByDay = matches.reduce((acc, m) => {

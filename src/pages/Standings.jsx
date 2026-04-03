@@ -154,7 +154,7 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
     </div>
 
     <AwardsWidget league={league} seasonId={seasonId} onShowAwards={onShowAwards} />
-    <CalendarWidget league={league} />
+    <CalendarWidget league={league} seasonId={seasonId} />
     </>
   )
 }
