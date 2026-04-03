@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
-const POSITION_SHORT = { setter: 'Свз', outside: 'Дойг', opposite: 'Диаг', middle: 'ЦБ', libero: 'Либ' }
+const POSITION_SHORT = { setter: 'Связка', outside: 'Доигровщик', opposite: 'Диага', middle: 'ЦБ', libero: 'Либеро' }
 
 function SectionHeader({ icon, title, accent, count, countLabel }) {
   return (
@@ -280,21 +280,18 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
                 <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: m.jersey_number != null ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)' }}>
                   {m.jersey_number != null ? m.jersey_number : '—'}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {m.is_captain && (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: '#F5A623', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 4, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+                      C
+                    </span>
+                  )}
                   <span
                     onClick={() => onSelectPlayer && onSelectPlayer(m.player_id)}
                     style={{ fontSize: 13, fontWeight: 600, color: '#fff', cursor: onSelectPlayer ? 'pointer' : 'default', borderBottom: onSelectPlayer ? '1px solid rgba(255,255,255,0.25)' : 'none', paddingBottom: 1 }}
                   >
                     {p.name}
                   </span>
-                  {m.is_captain && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: '#F5A623', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 4, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
-                      C
-                    </span>
-                  )}
-                  {(awardsMap[m.player_id] || []).map((nom, idx) => (
-                    <AwardBadge key={idx} nomination={nom} size={16} />
-                  ))}
                   {p.position && (
                     <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
                       {POSITION_SHORT[p.position] || p.position}
@@ -305,6 +302,9 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
                       {POSITION_SHORT[p.position2] || p.position2}
                     </span>
                   )}
+                  {(awardsMap[m.player_id] || []).map((nom, idx) => (
+                    <AwardBadge key={idx} nomination={nom} size={16} />
+                  ))}
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   {p.height ? (
