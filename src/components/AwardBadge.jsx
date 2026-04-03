@@ -1,6 +1,6 @@
 export const AWARD_CONFIG = {
   mvp:      { label: 'MVP',              statLabel: null,     dark: '#4a1d96', mid: '#7c3aed', light: '#c4b5fd', sym: 'M' },
-  setter:   { label: 'Лучший пассующий', statLabel: 'пасов',  dark: '#1e3a8a', mid: '#2563eb', light: '#93c5fd', sym: 'П' },
+  setter:   { label: 'Лучший связующий', statLabel: 'пасов',  dark: '#1e3a8a', mid: '#2563eb', light: '#93c5fd', sym: 'П' },
   server:   { label: 'Лучший подающий',  statLabel: 'эйсов',  dark: '#78350f', mid: '#d97706', light: '#fde68a', sym: 'С' },
   attacker: { label: 'Лучший атакующий', statLabel: 'очков',  dark: '#7f1d1d', mid: '#dc2626', light: '#fca5a5', sym: 'А' },
   libero:   { label: 'Лучший либеро',    statLabel: '%',      dark: '#064e3b', mid: '#059669', light: '#6ee7b7', sym: 'Л' },
