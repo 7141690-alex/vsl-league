@@ -1033,7 +1033,28 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
           if (filtered.length === 0) return (
             <div style={{ padding: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет игроков</div>
           )
-          return filtered.map((player, i) => {
+
+          // Группируем по командам
+          const groups = {}
+          for (const player of filtered) {
+            const teamName = memberships[player.id]?.teams?.name || 'Без команды'
+            if (!groups[teamName]) groups[teamName] = []
+            groups[teamName].push(player)
+          }
+          const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
+            if (a === 'Без команды') return 1
+            if (b === 'Без команды') return -1
+            return a.localeCompare(b, 'ru')
+          })
+
+          return sortedGroups.map(([teamName, groupPlayers]) => (
+            <div key={teamName}>
+              <div style={{ padding: '8px 16px 6px', background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: teamName === 'Без команды' ? 'rgba(255,255,255,0.2)' : '#374DF5', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: teamName === 'Без команды' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{teamName}</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)', borderRadius: 5, padding: '1px 6px' }}>{groupPlayers.length}</span>
+              </div>
+              {groupPlayers.map((player, i) => {
           const membership = memberships[player.id]
           const isEditing = editId === player.id
           const isAddingTeam = addTeamId === player.id
@@ -1136,7 +1157,9 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
               )}
             </div>
           )
-        })
+        })}
+            </div>
+          ))
         })()}
       </div>
     </div>
@@ -1178,7 +1201,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
   useEffect(() => { setForm(f => ({ ...f, team_id: '', player_id: '' })) }, [form.league])
 
   async function loadAwards() {
-    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('match_date', { ascending: false })
+    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('created_at', { ascending: false })
     const all = data || []
     setAwards(adminSeason ? all.filter(a => a.season_id === adminSeason.id) : all)
   }
