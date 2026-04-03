@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import CalendarWidget from '../components/CalendarWidget'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
-export default function Standings({ league, onSelectTeam, onShowAwards }) {
+export default function Standings({ league, seasonId, onSelectTeam, onShowAwards }) {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -11,16 +11,30 @@ export default function Standings({ league, onSelectTeam, onShowAwards }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const [{ data: teamsData }, { data: matchesData }] = await Promise.all([
-        supabase.from('teams').select('*').eq('league', league),
-        supabase.from('matches').select('*').eq('league', league).eq('status', 'finished'),
-      ])
+
+      // Команды: если есть сезон — получаем team_id из season_teams, затем загружаем команды по id
+      let teamsPromise
+      if (seasonId) {
+        const { data: stData } = await supabase.from('season_teams').select('team_id').eq('season_id', seasonId)
+        const teamIds = (stData || []).map(r => r.team_id)
+        teamsPromise = teamIds.length > 0
+          ? supabase.from('teams').select('*').in('id', teamIds).eq('league', league)
+          : Promise.resolve({ data: [] })
+      } else {
+        teamsPromise = supabase.from('teams').select('*').eq('league', league)
+      }
+
+      // Матчи фильтруем по сезону если есть
+      let matchQuery = supabase.from('matches').select('*').eq('league', league).eq('status', 'finished')
+      if (seasonId) matchQuery = matchQuery.eq('season_id', seasonId)
+
+      const [{ data: teamsData }, { data: matchesData }] = await Promise.all([teamsPromise, matchQuery])
       setTeams(teamsData || [])
       setMatches(matchesData || [])
       setLoading(false)
     }
     load()
-  }, [league])
+  }, [league, seasonId])
 
   const standings = teams.map(team => {
     const teamMatches = matches.filter(

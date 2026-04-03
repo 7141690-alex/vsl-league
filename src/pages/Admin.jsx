@@ -268,10 +268,12 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
     if (!adminSeason?.id) return
     const inSeason = seasonTeamIds.includes(team.id)
     if (inSeason) {
-      await supabase.from('season_teams').delete().eq('season_id', adminSeason.id).eq('team_id', team.id)
+      const { error } = await supabase.from('season_teams').delete().eq('season_id', adminSeason.id).eq('team_id', team.id)
+      if (error) { alert('Ошибка: ' + error.message); return }
       setSeasonTeamIds(ids => ids.filter(id => id !== team.id))
     } else {
-      await supabase.from('season_teams').insert({ season_id: adminSeason.id, team_id: team.id })
+      const { error } = await supabase.from('season_teams').insert({ season_id: adminSeason.id, team_id: team.id })
+      if (error) { alert('Ошибка: ' + error.message); return }
       setSeasonTeamIds(ids => [...ids, team.id])
     }
   }
