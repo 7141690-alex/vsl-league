@@ -102,6 +102,9 @@ export default function Admin() {
   const [seasons, setSeasons] = useState([])
   const [adminSeason, setAdminSeason] = useState(null)
   const [activeTab, setActiveTab] = useState('teams')
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [allowedTabs, setAllowedTabs] = useState([])
+  const [adminRecordLoaded, setAdminRecordLoaded] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -110,8 +113,27 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    if (session) { loadTeams(); loadMatches(); loadLeagues(); loadSeasons() }
+    if (session) { loadAdminRecord(); loadTeams(); loadMatches(); loadLeagues(); loadSeasons() }
   }, [session])
+
+  async function loadAdminRecord() {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', session?.user?.email || '')
+      .maybeSingle()
+
+    if (error) {
+      // Таблица не существует или ошибка — старый режим, полный доступ
+      setIsSuperAdmin(true)
+      setAllowedTabs(['teams', 'matches', 'players', 'awards', 'leagues', 'seasons', 'log'])
+    } else if (data) {
+      setIsSuperAdmin(data.is_super_admin)
+      setAllowedTabs(data.allowed_tabs || [])
+    }
+    // else: запись не найдена — нет доступа (значения по умолчанию)
+    setAdminRecordLoaded(true)
+  }
 
   async function login(e) {
     e.preventDefault()
@@ -150,7 +172,7 @@ export default function Admin() {
 
   const userEmail = session?.user?.email || ''
 
-  const TABS = [
+  const ALL_TABS = [
     { id: 'teams',   label: 'Команды' },
     { id: 'matches', label: 'Игры' },
     { id: 'players', label: 'Игроки' },
@@ -159,6 +181,9 @@ export default function Admin() {
     { id: 'seasons', label: '🗓 Сезоны' },
     { id: 'log',     label: '📋 Журнал' },
   ]
+  const TABS = isSuperAdmin
+    ? [...ALL_TABS, { id: 'admins', label: '👥 Администраторы' }]
+    : ALL_TABS.filter(t => allowedTabs.includes(t.id))
 
   if (!session) {
     return (
@@ -176,6 +201,31 @@ export default function Admin() {
             {loginError && <p style={{ color: '#FF495C', fontSize: 12, margin: 0 }}>{loginError}</p>}
             <button type="submit" style={{ ...btnPrimary, marginTop: 4, width: '100%', padding: '12px 20px' }}>Войти</button>
           </form>
+        </div>
+      </div>
+    )
+  }
+
+  if (!adminRecordLoaded) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Загрузка...</div>
+      </div>
+    )
+  }
+
+  if (!isSuperAdmin && allowedTabs.length === 0) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ ...card, padding: 32, textAlign: 'center', maxWidth: 380 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🚫</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Нет доступа</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>
+            Ваш аккаунт не настроен. Обратитесь к главному администратору.
+          </div>
+          <button onClick={logout} style={{ ...btnSecondary, color: '#FF495C', borderColor: 'rgba(255,73,92,0.2)', background: 'rgba(255,73,92,0.06)' }}>
+            Выйти
+          </button>
         </div>
       </div>
     )
@@ -250,6 +300,7 @@ export default function Admin() {
       {activeTab === 'leagues' && <LeaguesAdmin  userEmail={userEmail} onUpdate={loadLeagues} />}
       {activeTab === 'seasons' && <SeasonsAdmin  userEmail={userEmail} onUpdate={loadSeasons} />}
       {activeTab === 'log'     && <ActivityLog />}
+      {activeTab === 'admins'  && isSuperAdmin && <SubAdminsAdmin userEmail={userEmail} />}
     </div>
   )
 }
@@ -1605,6 +1656,255 @@ function ActivityLog() {
               </div>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Управление администраторами ─────────────────────────────────────────────
+
+const TAB_OPTIONS = [
+  { id: 'teams',   label: 'Команды' },
+  { id: 'matches', label: 'Игры' },
+  { id: 'players', label: 'Игроки' },
+  { id: 'awards',  label: 'Награды' },
+  { id: 'leagues', label: 'Лиги' },
+  { id: 'seasons', label: 'Сезоны' },
+  { id: 'log',     label: 'Журнал' },
+]
+
+function SubAdminsAdmin({ userEmail }) {
+  const [adminUsers, setAdminUsers] = useState([])
+  const [showForm, setShowForm] = useState(false)
+  const [formEmail, setFormEmail] = useState('')
+  const [formPassword, setFormPassword] = useState('')
+  const [formTabs, setFormTabs] = useState([])
+  const [createAuth, setCreateAuth] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editingTabs, setEditingTabs] = useState([])
+
+  useEffect(() => { loadAdmins() }, [])
+
+  async function loadAdmins() {
+    const { data } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('is_super_admin', false)
+      .order('created_at', { ascending: false })
+    setAdminUsers(data || [])
+  }
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    if (!formEmail) { setFormError('Введите email'); return }
+    if (createAuth && formPassword.length < 6) { setFormError('Пароль минимум 6 символов'); return }
+    if (formTabs.length === 0) { setFormError('Выберите хотя бы одну вкладку'); return }
+
+    setSaving(true)
+    setFormError('')
+
+    if (createAuth) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const tempClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { storageKey: 'vsl-temp-create', persistSession: false } }
+      )
+      const { error: authError } = await tempClient.auth.signUp({ email: formEmail, password: formPassword })
+      if (authError && !authError.message.toLowerCase().includes('already registered')) {
+        setFormError(authError.message)
+        setSaving(false)
+        return
+      }
+    }
+
+    const { error: dbError } = await supabase.from('admin_users').upsert(
+      { email: formEmail, is_super_admin: false, allowed_tabs: formTabs, created_by: userEmail },
+      { onConflict: 'email' }
+    )
+
+    if (dbError) {
+      setFormError(dbError.message)
+    } else {
+      setFormEmail('')
+      setFormPassword('')
+      setFormTabs([])
+      setShowForm(false)
+      loadAdmins()
+    }
+    setSaving(false)
+  }
+
+  function toggleFormTab(tabId) {
+    setFormTabs(prev => prev.includes(tabId) ? prev.filter(t => t !== tabId) : [...prev, tabId])
+  }
+
+  async function saveEditTabs(adminId) {
+    await supabase.from('admin_users').update({ allowed_tabs: editingTabs }).eq('id', adminId)
+    setEditingId(null)
+    loadAdmins()
+  }
+
+  async function deleteAdmin(id, email) {
+    if (!confirm(`Удалить администратора ${email}?`)) return
+    await supabase.from('admin_users').delete().eq('id', id)
+    loadAdmins()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>Суб-администраторы</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+            Ограниченный доступ к выбранным вкладкам
+          </div>
+        </div>
+        <button onClick={() => { setShowForm(!showForm); setFormError('') }} style={btnPrimary}>
+          {showForm ? 'Отмена' : '+ Добавить'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{ ...card, padding: 20 }}>
+          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <div style={labelStyle}>Email</div>
+              <input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="admin@example.com" style={inp} />
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={createAuth}
+                onChange={e => setCreateAuth(e.target.checked)}
+                style={{ width: 15, height: 15, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>Создать новый аккаунт (email + пароль)</span>
+            </label>
+
+            {createAuth && (
+              <div>
+                <div style={labelStyle}>Пароль</div>
+                <input type="password" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Минимум 6 символов" style={inp} />
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+                  Если пользователь уже создан в Supabase — снимите галочку
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div style={labelStyle}>Доступные вкладки</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {TAB_OPTIONS.map(tab => {
+                  const active = formTabs.includes(tab.id)
+                  return (
+                    <label key={tab.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                      padding: '6px 12px',
+                      background: active ? 'rgba(55,77,245,0.2)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${active ? 'rgba(55,77,245,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                      borderRadius: 8,
+                    }}>
+                      <input type="checkbox" checked={active} onChange={() => toggleFormTab(tab.id)} style={{ width: 13, height: 13, cursor: 'pointer' }} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: active ? '#8b97ff' : 'rgba(255,255,255,0.5)' }}>{tab.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            {formError && <div style={{ color: '#FF495C', fontSize: 12 }}>{formError}</div>}
+
+            <button type="submit" disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.6 : 1 }}>
+              {saving ? 'Сохранение...' : 'Создать администратора'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {adminUsers.length === 0 && !showForm ? (
+        <div style={{ textAlign: 'center', padding: 48, color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+          Суб-администраторов пока нет
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {adminUsers.map(admin => (
+            <div key={admin.id} style={{ ...card, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{admin.email}</div>
+                  {admin.created_by && (
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>Добавил: {admin.created_by}</div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  {editingId === admin.id ? (
+                    <>
+                      <button onClick={() => saveEditTabs(admin.id)} style={{ ...btnPrimary, padding: '7px 14px', fontSize: 12 }}>Сохранить</button>
+                      <button onClick={() => setEditingId(null)} style={{ ...btnSecondary, padding: '7px 14px', fontSize: 12 }}>Отмена</button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { setEditingId(admin.id); setEditingTabs(admin.allowed_tabs || []) }}
+                        style={{ ...btnSecondary, padding: '7px 14px', fontSize: 12 }}
+                      >
+                        Изменить права
+                      </button>
+                      <button
+                        onClick={() => deleteAdmin(admin.id, admin.email)}
+                        style={{ ...btnSecondary, padding: '7px 14px', fontSize: 12, color: '#FF495C', borderColor: 'rgba(255,73,92,0.2)', background: 'rgba(255,73,92,0.06)' }}
+                      >
+                        Удалить
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {editingId === admin.id ? (
+                  TAB_OPTIONS.map(tab => {
+                    const active = editingTabs.includes(tab.id)
+                    return (
+                      <label key={tab.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                        padding: '5px 10px',
+                        background: active ? 'rgba(55,77,245,0.2)' : 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${active ? 'rgba(55,77,245,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: 7,
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={() => setEditingTabs(prev => prev.includes(tab.id) ? prev.filter(t => t !== tab.id) : [...prev, tab.id])}
+                          style={{ width: 12, height: 12, cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: 12, color: active ? '#8b97ff' : 'rgba(255,255,255,0.4)' }}>{tab.label}</span>
+                      </label>
+                    )
+                  })
+                ) : (
+                  (admin.allowed_tabs || []).length === 0 ? (
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>Нет доступа к вкладкам</span>
+                  ) : (
+                    (admin.allowed_tabs || []).map(tabId => {
+                      const opt = TAB_OPTIONS.find(t => t.id === tabId)
+                      return opt ? (
+                        <span key={tabId} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: 'rgba(55,77,245,0.15)', border: '1px solid rgba(55,77,245,0.3)', color: '#8b97ff' }}>
+                          {opt.label}
+                        </span>
+                      ) : null
+                    })
+                  )
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
