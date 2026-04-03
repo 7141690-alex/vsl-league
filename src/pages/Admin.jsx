@@ -676,7 +676,7 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
   const totalSets = parseInt(form.home_sets) + parseInt(form.away_sets)
 
   function updateSetsCount(home, away) {
-    const total = parseInt(home) + parseInt(away)
+    const total = Math.min(parseInt(home) + parseInt(away), 5)
     if (total !== totalSets) {
       setSets(Array.from({ length: total }, (_, i) => sets[i] || { home: '', away: '' }))
     }
@@ -756,9 +756,9 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
                 {sets.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', width: 48, flexShrink: 0 }}>Сет {i + 1}</span>
-                    <input type="number" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" min="0" max="25" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                     <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>:</span>
-                    <input type="number" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" min="0" max="25" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                   </div>
                 ))}
               </div>
