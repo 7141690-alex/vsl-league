@@ -7,7 +7,7 @@ const NOMINATIONS = [
   ...Object.entries(AWARD_CONFIG).map(([key, cfg]) => ({ key, label: cfg.label })),
 ]
 
-export default function AwardsPage({ league, seasonId, leagueName, onBack }) {
+export default function AwardsPage({ league, seasonId, leagueName, onBack, onSelectPlayer }) {
   const [awards, setAwards] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -124,7 +124,10 @@ export default function AwardsPage({ league, seasonId, leagueName, onBack }) {
                 <AwardBadge nomination={a.nomination} size={a.nomination === 'mvp' ? 38 : 24} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+                    <span
+                      onClick={() => onSelectPlayer && a.player_id && onSelectPlayer(a.player_id)}
+                      style={{ fontSize: 14, fontWeight: 800, color: '#fff', cursor: onSelectPlayer && a.player_id ? 'pointer' : 'default', borderBottom: onSelectPlayer && a.player_id ? '1px solid rgba(255,255,255,0.25)' : 'none', paddingBottom: 1 }}
+                    >
                       {a.players?.name || '—'}
                     </span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: cfg?.mid, background: `${cfg?.mid}22`, border: `1px solid ${cfg?.mid}44`, borderRadius: 6, padding: '1px 8px', flexShrink: 0 }}>

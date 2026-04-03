@@ -131,7 +131,7 @@ export default function App() {
   const [showAwards, setShowAwards] = useState(false)
 
   useEffect(() => {
-    supabase.from('leagues').select('*').eq('active', true).order('created_at')
+    supabase.from('leagues').select('*').eq('active', true).order('sort_order').order('created_at')
       .then(({ data }) => { if (data?.length) setLeagues(data) })
 
     supabase.from('seasons').select('*').order('created_at', { ascending: false })
@@ -270,6 +270,7 @@ export default function App() {
             seasonId={seasonId}
             leagueName={`${GENDER_ICON[currentLeague?.gender] || ''} ${currentLeague?.display_name || league}`}
             onBack={() => setShowAwards(false)}
+            onSelectPlayer={setSelectedPlayer}
           />
         ) : (
           <>
@@ -279,9 +280,16 @@ export default function App() {
                 seasonId={seasonId}
                 onSelectTeam={setSelectedTeam}
                 onShowAwards={() => setShowAwards(true)}
+                onSelectPlayer={setSelectedPlayer}
               />
             )}
-            {tab === 'schedule' && <Schedule league={league} seasonId={seasonId} />}
+            {tab === 'schedule' && (
+              <Schedule
+                league={league}
+                seasonId={seasonId}
+                onSelectTeam={team => { setSelectedPlayer(null); setShowAwards(false); setSelectedTeam(team) }}
+              />
+            )}
           </>
         )}
       </main>

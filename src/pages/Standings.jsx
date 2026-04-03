@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import CalendarWidget from '../components/CalendarWidget'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
-export default function Standings({ league, seasonId, onSelectTeam, onShowAwards }) {
+export default function Standings({ league, seasonId, onSelectTeam, onShowAwards, onSelectPlayer }) {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -153,13 +153,13 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
       </div>
     </div>
 
-    <AwardsWidget league={league} seasonId={seasonId} onShowAwards={onShowAwards} />
+    <AwardsWidget league={league} seasonId={seasonId} onShowAwards={onShowAwards} onSelectPlayer={onSelectPlayer} />
     <CalendarWidget league={league} seasonId={seasonId} />
     </>
   )
 }
 
-function AwardsWidget({ league, seasonId, onShowAwards }) {
+function AwardsWidget({ league, seasonId, onShowAwards, onSelectPlayer }) {
   const [awards, setAwards] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -215,7 +215,10 @@ function AwardsWidget({ league, seasonId, onShowAwards }) {
               <AwardBadge nomination={a.nomination} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span
+                    onClick={() => onSelectPlayer && a.player_id && onSelectPlayer(a.player_id)}
+                    style={{ fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: onSelectPlayer && a.player_id ? 'pointer' : 'default', borderBottom: onSelectPlayer && a.player_id ? '1px solid rgba(255,255,255,0.25)' : 'none', paddingBottom: 1 }}
+                  >
                     {a.players?.name || '—'}
                   </span>
                   {stat && (

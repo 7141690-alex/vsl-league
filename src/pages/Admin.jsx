@@ -758,7 +758,7 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
       memberQuery = memberQuery.is('left_at', null)
     }
     const [{ data: pData }, { data: mData }] = await Promise.all([
-      supabase.from('players').select('*').order('name'),
+      supabase.from('players').select('*').order('created_at', { ascending: false }),
       memberQuery,
     ])
     setPlayers(pData || [])
@@ -988,7 +988,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
   useEffect(() => { setForm(f => ({ ...f, team_id: '', player_id: '' })) }, [form.league])
 
   async function loadAwards() {
-    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('match_date', { ascending: false })
+    const { data } = await supabase.from('awards').select('*, players(name), teams(name)').order('created_at', { ascending: false })
     const all = data || []
     setAwards(adminSeason ? all.filter(a => a.season_id === adminSeason.id) : all)
   }
@@ -1110,11 +1110,21 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
   const [editData, setEditData] = useState({})
 
   async function load() {
-    const { data } = await supabase.from('leagues').select('*').order('created_at')
+    const { data } = await supabase.from('leagues').select('*').order('sort_order').order('created_at')
     setLeagues(data || [])
   }
 
   useEffect(() => { load() }, [])
+
+  async function moveLeague(i, dir) {
+    const arr = [...leagues]
+    const target = i + dir
+    if (target < 0 || target >= arr.length) return
+    ;[arr[i], arr[target]] = [arr[target], arr[i]]
+    await Promise.all(arr.map((lg, idx) => supabase.from('leagues').update({ sort_order: idx }).eq('id', lg.id)))
+    load()
+    onUpdate()
+  }
 
   async function addLeague(e) {
     e.preventDefault()
@@ -1236,7 +1246,9 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <button onClick={() => moveLeague(i, -1)} disabled={i === 0} style={{ fontSize: 14, color: i === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', padding: '4px 6px', lineHeight: 1 }}>↑</button>
+                <button onClick={() => moveLeague(i, 1)} disabled={i === leagues.length - 1} style={{ fontSize: 14, color: i === leagues.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: i === leagues.length - 1 ? 'default' : 'pointer', padding: '4px 6px', lineHeight: 1 }}>↓</button>
                 <button onClick={() => { setEditId(lg.id); setEditData({ display_name: lg.display_name, gender: lg.gender, active: lg.active !== false }) }} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
                 <button onClick={() => deleteLeague(lg.id, lg.display_name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
               </div>

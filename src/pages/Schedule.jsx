@@ -24,7 +24,7 @@ function groupByDate(matches) {
   }, {})
 }
 
-function MatchCard({ match, teams, showDate = false }) {
+function MatchCard({ match, teams, showDate = false, onSelectTeam }) {
   const home = teams[match.home_team_id]
   const away = teams[match.away_team_id]
   const finished = match.status === 'finished'
@@ -55,7 +55,10 @@ function MatchCard({ match, teams, showDate = false }) {
       </div>
 
       {/* Home */}
-      <div style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: 13, color: homeWon ? '#fff' : finished ? 'rgba(255,255,255,0.4)' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div
+        onClick={() => home && onSelectTeam && onSelectTeam(home)}
+        style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: 13, color: homeWon ? '#fff' : finished ? 'rgba(255,255,255,0.4)' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: home && onSelectTeam ? 'pointer' : 'default' }}
+      >
         {home?.name || '—'}
       </div>
 
@@ -84,7 +87,10 @@ function MatchCard({ match, teams, showDate = false }) {
       </div>
 
       {/* Away */}
-      <div style={{ flex: 1, fontWeight: 600, fontSize: 13, color: awayWon ? '#fff' : finished ? 'rgba(255,255,255,0.4)' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div
+        onClick={() => away && onSelectTeam && onSelectTeam(away)}
+        style={{ flex: 1, fontWeight: 600, fontSize: 13, color: awayWon ? '#fff' : finished ? 'rgba(255,255,255,0.4)' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: away && onSelectTeam ? 'pointer' : 'default' }}
+      >
         {away?.name || '—'}
       </div>
 
@@ -117,7 +123,7 @@ function MatchCard({ match, teams, showDate = false }) {
   )
 }
 
-function WeekBlock({ title, icon, matches, teams, accent, emptyText }) {
+function WeekBlock({ title, icon, matches, teams, accent, emptyText, onSelectTeam }) {
   if (matches.length === 0) return (
     <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 0 }}>
@@ -140,13 +146,13 @@ function WeekBlock({ title, icon, matches, teams, accent, emptyText }) {
         </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {matches.map(m => <MatchCard key={m.id} match={m} teams={teams} showDate={true} />)}
+        {matches.map(m => <MatchCard key={m.id} match={m} teams={teams} showDate={true} onSelectTeam={onSelectTeam} />)}
       </div>
     </div>
   )
 }
 
-export default function Schedule({ league, seasonId }) {
+export default function Schedule({ league, seasonId, onSelectTeam }) {
   const [matches, setMatches] = useState([])
   const [teams, setTeams] = useState({})
   const [loading, setLoading] = useState(true)
@@ -235,6 +241,7 @@ export default function Schedule({ league, seasonId }) {
         teams={teams}
         accent="#374DF5"
         emptyText="На этой неделе игр нет"
+        onSelectTeam={onSelectTeam}
       />
 
       {/* Last week results */}
@@ -250,6 +257,7 @@ export default function Schedule({ league, seasonId }) {
         teams={teams}
         accent="#5BB849"
         emptyText="На прошлой неделе игр не было"
+        onSelectTeam={onSelectTeam}
       />
 
       {/* All games section header */}
@@ -274,7 +282,7 @@ export default function Schedule({ league, seasonId }) {
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {dayMatches.map(match => <MatchCard key={match.id} match={match} teams={teams} />)}
+              {dayMatches.map(match => <MatchCard key={match.id} match={match} teams={teams} onSelectTeam={onSelectTeam} />)}
             </div>
           </div>
         ))}
