@@ -738,12 +738,14 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
               {form.status === 'finished' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Счёт:</span>
-                  <input type="number" min="0" max="3" value={form.home_sets}
+                  <input type="number" min="0" max="3" placeholder="0" value={form.home_sets}
                     onChange={e => { setForm(f => ({ ...f, home_sets: e.target.value })); updateSetsCount(e.target.value, form.away_sets) }}
+                    onFocus={e => e.target.select()}
                     style={{ ...inp, width: 60, textAlign: 'center', padding: '10px 8px' }} />
                   <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>:</span>
-                  <input type="number" min="0" max="3" value={form.away_sets}
+                  <input type="number" min="0" max="3" placeholder="0" value={form.away_sets}
                     onChange={e => { setForm(f => ({ ...f, away_sets: e.target.value })); updateSetsCount(form.home_sets, e.target.value) }}
+                    onFocus={e => e.target.select()}
                     style={{ ...inp, width: 60, textAlign: 'center', padding: '10px 8px' }} />
                 </div>
               )}
@@ -757,9 +759,9 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
                 {sets.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', width: 48, flexShrink: 0 }}>Сет {i + 1}</span>
-                    <input type="number" min="0" max="25" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" min="0" max="25" placeholder="0" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} onFocus={e => e.target.select()} style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                     <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>:</span>
-                    <input type="number" min="0" max="25" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} placeholder="0" style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" min="0" max="25" placeholder="0" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} onFocus={e => e.target.select()} style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                   </div>
                 ))}
               </div>
@@ -1815,7 +1817,7 @@ function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
     textAlign: 'center', outline: 'none', width: '100%', boxSizing: 'border-box',
   }
 
-  function RosterTable({ roster, teamName }) {
+  function renderRoster(roster, teamName) {
     if (roster.length === 0) return (
       <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, padding: '8px 0 4px' }}>Состав не заполнен</div>
     )
@@ -1889,8 +1891,8 @@ function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <RosterTable roster={homeRoster} teamName={homeTeam?.name || 'Хозяева'} />
-        <RosterTable roster={awayRoster} teamName={awayTeam?.name || 'Гости'} />
+        {renderRoster(homeRoster, homeTeam?.name || 'Хозяева')}
+        {renderRoster(awayRoster, awayTeam?.name || 'Гости')}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
