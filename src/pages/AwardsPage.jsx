@@ -15,14 +15,13 @@ export default function AwardsPage({ league, seasonId, leagueName, onBack }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      let query = supabase
+      const { data } = await supabase
         .from('awards')
         .select('*, players(name), teams(name)')
         .eq('league', league)
         .order('match_date', { ascending: false })
-      if (seasonId) query = query.eq('season_id', seasonId)
-      const { data } = await query
-      setAwards(data || [])
+      const all = data || []
+      setAwards(seasonId ? all.filter(a => a.season_id === seasonId) : all)
       setLoading(false)
     }
     load()

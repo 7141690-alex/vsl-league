@@ -146,7 +146,7 @@ function WeekBlock({ title, icon, matches, teams, accent, emptyText }) {
   )
 }
 
-export default function Schedule({ league }) {
+export default function Schedule({ league, seasonId }) {
   const [matches, setMatches] = useState([])
   const [teams, setTeams] = useState({})
   const [loading, setLoading] = useState(true)
@@ -155,8 +155,14 @@ export default function Schedule({ league }) {
     async function load() {
       setLoading(true)
       try {
+        let matchQuery = supabase
+          .from('matches')
+          .select('id, league, home_team_id, away_team_id, match_date, venue, status, home_sets, away_sets, photo_url, video_url, season_id')
+          .eq('league', league)
+          .order('match_date')
+
         const [{ data: matchesData, error: me }, { data: teamsData, error: te }] = await Promise.all([
-          supabase.from('matches').select('id, league, home_team_id, away_team_id, match_date, venue, status, home_sets, away_sets, photo_url, video_url').eq('league', league).order('match_date'),
+          matchQuery,
           supabase.from('teams').select('*').eq('league', league),
         ])
         if (me || te) { console.error('Supabase error:', me || te); setLoading(false); return }
@@ -174,14 +180,16 @@ export default function Schedule({ league }) {
 
         const teamsMap = (teamsData || []).reduce((acc, t) => ({ ...acc, [t.id]: t }), {})
         setTeams(teamsMap)
-        setMatches((matchesData || []).map(m => ({ ...m, set_scores: setsMap[m.id] || [] })))
+        const allMatches = (matchesData || []).map(m => ({ ...m, set_scores: setsMap[m.id] || [] }))
+        const filtered = seasonId ? allMatches.filter(m => m.season_id === seasonId) : allMatches
+        setMatches(filtered)
       } catch(e) {
         console.error(e)
       }
       setLoading(false)
     }
     load()
-  }, [league])
+  }, [league, seasonId])
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>

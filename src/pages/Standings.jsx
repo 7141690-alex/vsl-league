@@ -24,13 +24,12 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
         teamsPromise = supabase.from('teams').select('*').eq('league', league)
       }
 
-      // Матчи фильтруем по сезону если есть
-      let matchQuery = supabase.from('matches').select('*').eq('league', league).eq('status', 'finished')
-      if (seasonId) matchQuery = matchQuery.eq('season_id', seasonId)
+      const matchQuery = supabase.from('matches').select('*').eq('league', league).eq('status', 'finished')
 
       const [{ data: teamsData }, { data: matchesData }] = await Promise.all([teamsPromise, matchQuery])
       setTeams(teamsData || [])
-      setMatches(matchesData || [])
+      const allMatches = matchesData || []
+      setMatches(seasonId ? allMatches.filter(m => m.season_id === seasonId) : allMatches)
       setLoading(false)
     }
     load()
@@ -167,14 +166,13 @@ function AwardsWidget({ league, seasonId, onShowAwards }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      let query = supabase
+      const { data } = await supabase
         .from('awards')
         .select('*, players(name), teams(name)')
         .eq('league', league)
         .order('match_date', { ascending: false })
-      if (seasonId) query = query.eq('season_id', seasonId)
-      const { data } = await query
-      setAwards(data || [])
+      const all = data || []
+      setAwards(seasonId ? all.filter(a => a.season_id === seasonId) : all)
       setLoading(false)
     }
     load()
