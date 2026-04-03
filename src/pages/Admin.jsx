@@ -570,6 +570,8 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
   const [sets, setSets] = useState([])
   const [editId, setEditId] = useState(null)
   const [statsMatchId, setStatsMatchId] = useState(null)
+  const [matchSaving, setMatchSaving] = useState(false)
+  const [matchSaveError, setMatchSaveError] = useState('')
 
   // Filter matches by admin season
   const visibleMatches = adminSeason
@@ -586,45 +588,58 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
 
   async function saveMatch(e) {
     e.preventDefault()
-    const matchData = {
-      league: form.league,
-      home_team_id: form.home_team_id || null,
-      away_team_id: form.away_team_id || null,
-      match_date: form.match_date || null,
-      venue: form.venue || null,
-      status: form.status,
-      home_sets: parseInt(form.home_sets) || 0,
-      away_sets: parseInt(form.away_sets) || 0,
-      photo_url: form.photo_url || null,
-      video_url: form.video_url || null,
-      ...(adminSeason && !editId ? { season_id: adminSeason.id } : {}),
+    setMatchSaving(true)
+    setMatchSaveError('')
+
+    try {
+      const matchData = {
+        league: form.league,
+        home_team_id: form.home_team_id || null,
+        away_team_id: form.away_team_id || null,
+        match_date: form.match_date || null,
+        venue: form.venue || null,
+        status: form.status,
+        home_sets: parseInt(form.home_sets) || 0,
+        away_sets: parseInt(form.away_sets) || 0,
+        photo_url: form.photo_url || null,
+        video_url: form.video_url || null,
+        ...(adminSeason && !editId ? { season_id: adminSeason.id } : {}),
+      }
+
+      const home = teamsMap[form.home_team_id]?.name || '?'
+      const away = teamsMap[form.away_team_id]?.name || '?'
+      const matchName = `${home} vs ${away}`
+
+      let matchId = editId
+      if (editId) {
+        const { error } = await supabase.from('matches').update(matchData).eq('id', editId)
+        if (error) throw error
+        await logAction(userEmail, 'Изменено', 'игра', matchName, matchData)
+      } else {
+        const { data, error } = await supabase.from('matches').insert(matchData).select().single()
+        if (error) throw error
+        matchId = data?.id
+        await logAction(userEmail, 'Добавлено', 'игра', matchName, matchData)
+      }
+
+      if (matchId && sets.length > 0) {
+        const { error: delErr } = await supabase.from('set_scores').delete().eq('match_id', matchId)
+        if (delErr) throw delErr
+        const setData = sets.map((s, i) => ({
+          match_id: matchId, set_number: i + 1,
+          home_points: parseInt(s.home) || 0, away_points: parseInt(s.away) || 0,
+        }))
+        const { error: insErr } = await supabase.from('set_scores').insert(setData)
+        if (insErr) throw insErr
+      }
+
+      resetForm()
+      onUpdate()
+    } catch (err) {
+      setMatchSaveError(err?.message || 'Ошибка при сохранении')
+    } finally {
+      setMatchSaving(false)
     }
-
-    const home = teamsMap[form.home_team_id]?.name || '?'
-    const away = teamsMap[form.away_team_id]?.name || '?'
-    const matchName = `${home} vs ${away}`
-
-    let matchId = editId
-    if (editId) {
-      await supabase.from('matches').update(matchData).eq('id', editId)
-      await logAction(userEmail, 'Изменено', 'игра', matchName, matchData)
-    } else {
-      const { data } = await supabase.from('matches').insert(matchData).select().single()
-      matchId = data?.id
-      await logAction(userEmail, 'Добавлено', 'игра', matchName, matchData)
-    }
-
-    if (matchId && sets.length > 0) {
-      await supabase.from('set_scores').delete().eq('match_id', matchId)
-      const setData = sets.map((s, i) => ({
-        match_id: matchId, set_number: i + 1,
-        home_points: parseInt(s.home) || 0, away_points: parseInt(s.away) || 0,
-      }))
-      await supabase.from('set_scores').insert(setData)
-    }
-
-    resetForm()
-    onUpdate()
   }
 
   function resetForm() {
@@ -763,8 +778,15 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
             </div>
           )}
 
+          {matchSaveError && (
+            <div style={{ color: '#FF495C', fontSize: 12, background: 'rgba(255,73,92,0.1)', border: '1px solid rgba(255,73,92,0.25)', borderRadius: 8, padding: '8px 12px' }}>
+              ⚠ {matchSaveError}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-            <button type="submit" style={btnPrimary}>{editId ? 'Сохранить' : 'Добавить'}</button>
+            <button type="submit" disabled={matchSaving} style={{ ...btnPrimary, opacity: matchSaving ? 0.7 : 1 }}>
+              {matchSaving ? 'Сохранение...' : editId ? 'Сохранить' : 'Добавить'}
+            </button>
             {editId && <button type="button" onClick={resetForm} style={btnSecondary}>Отмена</button>}
           </div>
         </form>
