@@ -572,11 +572,12 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
   const [statsMatchId, setStatsMatchId] = useState(null)
   const [matchSaving, setMatchSaving] = useState(false)
   const [matchSaveError, setMatchSaveError] = useState('')
+  const [filterLeague, setFilterLeague] = useState('')
 
-  // Filter matches by admin season
-  const visibleMatches = adminSeason
-    ? matches.filter(m => m.season_id === adminSeason.id)
-    : matches
+  // Filter matches by admin season + league
+  const visibleMatches = matches
+    .filter(m => !adminSeason || m.season_id === adminSeason.id)
+    .filter(m => !filterLeague || m.league === filterLeague)
 
   const leagueOptions = leagues.length > 0
     ? leagues
@@ -807,10 +808,26 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
 
       {/* Список игр */}
       <div style={card}>
-        <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Игры</span>
           {adminSeason && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{adminSeason.name}</span>}
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{visibleMatches.length}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            {[{ name: '', label: 'Все' }, ...leagueOptions].map(l => {
+              const active = filterLeague === l.name
+              return (
+                <button key={l.name} onClick={() => setFilterLeague(l.name)} style={{
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  border: active ? '1px solid rgba(55,77,245,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 7, padding: '4px 10px',
+                  background: active ? 'rgba(55,77,245,0.2)' : 'rgba(255,255,255,0.04)',
+                  color: active ? '#8b97ff' : 'rgba(255,255,255,0.4)',
+                }}>
+                  {l.display_name || l.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
         {visibleMatches.length === 0 && (
           <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет игр</div>
@@ -1744,15 +1761,15 @@ function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
     const map = {}
     for (const s of (existing || [])) {
       map[s.player_id] = {
-        attack_pts: s.attack_pts ?? 0,
-        blocks: s.blocks ?? 0,
-        aces: s.aces ?? 0,
-        assists: s.assists ?? 0,
+        attack_pts: s.attack_pts || '',
+        blocks: s.blocks || '',
+        aces: s.aces || '',
+        assists: s.assists || '',
         reception_pct: s.reception_pct != null ? String(s.reception_pct) : '',
       }
     }
     for (const m of [...home, ...away]) {
-      if (!map[m.player_id]) map[m.player_id] = { attack_pts: 0, blocks: 0, aces: 0, assists: 0, reception_pct: '' }
+      if (!map[m.player_id]) map[m.player_id] = { attack_pts: '', blocks: '', aces: '', assists: '', reception_pct: '' }
     }
     setStats(map)
   }
@@ -1819,7 +1836,7 @@ function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
               <div style={{ textAlign: 'center' }}>%Прём</div>
             </div>
             {roster.map(m => {
-              const s = stats[m.player_id] || { attack_pts: 0, blocks: 0, aces: 0, assists: 0, reception_pct: '' }
+              const s = stats[m.player_id] || { attack_pts: '', blocks: '', aces: '', assists: '', reception_pct: '' }
               const isLibero = m.players?.position === 'libero'
               return (
                 <div key={m.player_id} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 54px 54px 54px 54px 60px', gap: 6, alignItems: 'center', marginBottom: 7 }}>
@@ -1830,14 +1847,15 @@ function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
                     <span>{m.players?.name}</span>
                     {isLibero && <span style={{ fontSize: 9, background: 'rgba(85,184,255,0.2)', color: '#55b8ff', borderRadius: 3, padding: '1px 4px', flexShrink: 0 }}>Л</span>}
                   </div>
-                  <input type="number" min="0" value={s.attack_pts} onChange={e => upd(m.player_id, 'attack_pts', e.target.value)} style={numInp} />
-                  <input type="number" min="0" value={s.blocks} onChange={e => upd(m.player_id, 'blocks', e.target.value)} style={numInp} />
-                  <input type="number" min="0" value={s.aces} onChange={e => upd(m.player_id, 'aces', e.target.value)} style={numInp} />
-                  <input type="number" min="0" value={s.assists} onChange={e => upd(m.player_id, 'assists', e.target.value)} style={numInp} />
+                  <input type="number" min="0" placeholder="0" value={s.attack_pts} onChange={e => upd(m.player_id, 'attack_pts', e.target.value)} onFocus={e => e.target.select()} style={numInp} />
+                  <input type="number" min="0" placeholder="0" value={s.blocks} onChange={e => upd(m.player_id, 'blocks', e.target.value)} onFocus={e => e.target.select()} style={numInp} />
+                  <input type="number" min="0" placeholder="0" value={s.aces} onChange={e => upd(m.player_id, 'aces', e.target.value)} onFocus={e => e.target.select()} style={numInp} />
+                  <input type="number" min="0" placeholder="0" value={s.assists} onChange={e => upd(m.player_id, 'assists', e.target.value)} onFocus={e => e.target.select()} style={numInp} />
                   <input
                     type="number" min="0" max="100" step="0.1"
                     value={s.reception_pct}
                     onChange={e => upd(m.player_id, 'reception_pct', e.target.value)}
+                    onFocus={e => e.target.select()}
                     placeholder={isLibero ? '%' : '—'}
                     style={{ ...numInp, opacity: isLibero ? 1 : 0.3 }}
                   />
