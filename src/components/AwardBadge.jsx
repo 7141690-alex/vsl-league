@@ -3,6 +3,7 @@ export const AWARD_CONFIG = {
   setter:   { label: 'Лучший связующий', statLabel: 'пасов',  dark: '#1e3a8a', mid: '#2563eb', light: '#93c5fd', sym: 'П' },
   server:   { label: 'Лучший подающий',  statLabel: 'эйсов',  dark: '#78350f', mid: '#d97706', light: '#fde68a', sym: 'С' },
   attacker: { label: 'Лучший атакующий', statLabel: 'очков',  dark: '#7f1d1d', mid: '#dc2626', light: '#fca5a5', sym: 'А' },
+  blocker:  { label: 'Лучший блокирующий', statLabel: 'блоков', dark: '#1e3a5f', mid: '#0e7490', light: '#67e8f9', sym: 'Б' },
   libero:   { label: 'Лучший либеро',    statLabel: '%',      dark: '#064e3b', mid: '#059669', light: '#6ee7b7', sym: 'Л' },
 }
 
