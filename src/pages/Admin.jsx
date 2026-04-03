@@ -970,15 +970,15 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
 
   useEffect(() => {
     if (form.team_id) {
-      supabase.from('team_memberships')
+      let q = supabase.from('team_memberships')
         .select('player_id, players(id, name)')
         .eq('team_id', form.team_id)
-        .is('left_at', null)
-        .then(({ data }) => {
-          const ps = (data || []).map(m => m.players).filter(Boolean)
-          ps.sort((a, b) => a.name.localeCompare(b.name))
-          setPlayers(ps)
-        })
+      q = adminSeason?.id ? q.eq('season_id', adminSeason.id) : q.is('left_at', null)
+      q.then(({ data }) => {
+        const ps = (data || []).map(m => m.players).filter(Boolean)
+        ps.sort((a, b) => a.name.localeCompare(b.name))
+        setPlayers(ps)
+      })
     } else {
       setPlayers([])
       setForm(f => ({ ...f, player_id: '' }))
