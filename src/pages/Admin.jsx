@@ -91,6 +91,8 @@ export default function Admin() {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
   const [leagues, setLeagues] = useState([])
+  const [seasons, setSeasons] = useState([])
+  const [adminSeason, setAdminSeason] = useState(null)
   const [activeTab, setActiveTab] = useState('teams')
 
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    if (session) { loadTeams(); loadMatches(); loadLeagues() }
+    if (session) { loadTeams(); loadMatches(); loadLeagues(); loadSeasons() }
   }, [session])
 
   async function login(e) {
@@ -128,6 +130,16 @@ export default function Admin() {
     setLeagues(data || [])
   }
 
+  async function loadSeasons() {
+    const { data } = await supabase.from('seasons').select('*').order('created_at', { ascending: false })
+    const list = data || []
+    setSeasons(list)
+    if (list.length > 0) {
+      const current = list.find(s => s.is_current) || list[0]
+      setAdminSeason(current)
+    }
+  }
+
   const userEmail = session?.user?.email || ''
 
   const TABS = [
@@ -136,6 +148,7 @@ export default function Admin() {
     { id: 'players', label: 'Игроки' },
     { id: 'awards',  label: '🏅 Награды' },
     { id: 'leagues', label: '🏆 Лиги' },
+    { id: 'seasons', label: '🗓 Сезоны' },
     { id: 'log',     label: '📋 Журнал' },
   ]
 
@@ -163,19 +176,44 @@ export default function Admin() {
   return (
     <div style={{ maxWidth: 896, margin: '0 auto', padding: '0 16px 64px' }}>
       {/* Panel header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Панель администратора</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
-            VSL — Volleyball Super League · {userEmail}
+      <div style={{ paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Панель администратора</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
+              VSL — Volleyball Super League · {userEmail}
+            </div>
           </div>
+          <button
+            onClick={logout}
+            style={{ ...btnSecondary, padding: '8px 16px', fontSize: 12, color: '#FF495C', borderColor: 'rgba(255,73,92,0.2)', background: 'rgba(255,73,92,0.06)', flexShrink: 0 }}
+          >
+            Выйти
+          </button>
         </div>
-        <button
-          onClick={logout}
-          style={{ ...btnSecondary, padding: '8px 16px', fontSize: 12, color: '#FF495C', borderColor: 'rgba(255,73,92,0.2)', background: 'rgba(255,73,92,0.06)' }}
-        >
-          Выйти
-        </button>
+        {/* Season switcher */}
+        {seasons.length > 0 && (
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Рабочий сезон:</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {seasons.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setAdminSeason(s)}
+                  style={{
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', borderRadius: 8, padding: '5px 14px',
+                    background: adminSeason?.id === s.id ? (s.is_current ? '#5BB849' : '#FF8C42') : 'rgba(255,255,255,0.08)',
+                    color: adminSeason?.id === s.id ? '#fff' : 'rgba(255,255,255,0.45)',
+                    boxShadow: adminSeason?.id === s.id ? `0 0 10px ${s.is_current ? '#5BB84966' : '#FF8C4266'}` : 'none',
+                  }}
+                >
+                  {s.name}
+                  {s.is_current && <span style={{ fontSize: 9, marginLeft: 6, background: 'rgba(255,255,255,0.25)', borderRadius: 4, padding: '1px 5px', verticalAlign: 'middle' }}>АКТИВНЫЙ</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -197,11 +235,12 @@ export default function Admin() {
         ))}
       </div>
 
-      {activeTab === 'teams'   && <TeamsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} onUpdate={loadTeams} />}
-      {activeTab === 'matches' && <MatchesAdmin  matches={matches} teams={teams} leagues={leagues} userEmail={userEmail} onUpdate={loadMatches} />}
+      {activeTab === 'teams'   && <TeamsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} onUpdate={loadTeams} adminSeason={adminSeason} />}
+      {activeTab === 'matches' && <MatchesAdmin  matches={matches} teams={teams} leagues={leagues} userEmail={userEmail} onUpdate={loadMatches} adminSeason={adminSeason} />}
       {activeTab === 'players' && <PlayersAdmin  teams={teams}   userEmail={userEmail} />}
-      {activeTab === 'awards'  && <AwardsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} />}
+      {activeTab === 'awards'  && <AwardsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} adminSeason={adminSeason} />}
       {activeTab === 'leagues' && <LeaguesAdmin  userEmail={userEmail} onUpdate={loadLeagues} />}
+      {activeTab === 'seasons' && <SeasonsAdmin  userEmail={userEmail} onUpdate={loadSeasons} />}
       {activeTab === 'log'     && <ActivityLog />}
     </div>
   )
@@ -209,11 +248,33 @@ export default function Admin() {
 
 // ─── Команды ─────────────────────────────────────────────────────────────────
 
-function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
+function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
   const [form, setForm] = useState({ name: '', league: 'male', photo_url: '', active: true })
   const [editingId, setEditingId] = useState(null)
   const [editingData, setEditingData] = useState({})
   const [showInactive, setShowInactive] = useState(false)
+  const [seasonTeamIds, setSeasonTeamIds] = useState([])
+
+  useEffect(() => {
+    if (adminSeason?.id) {
+      supabase.from('season_teams').select('team_id').eq('season_id', adminSeason.id)
+        .then(({ data }) => setSeasonTeamIds((data || []).map(r => r.team_id)))
+    } else {
+      setSeasonTeamIds([])
+    }
+  }, [adminSeason?.id])
+
+  async function toggleSeasonTeam(team) {
+    if (!adminSeason?.id) return
+    const inSeason = seasonTeamIds.includes(team.id)
+    if (inSeason) {
+      await supabase.from('season_teams').delete().eq('season_id', adminSeason.id).eq('team_id', team.id)
+      setSeasonTeamIds(ids => ids.filter(id => id !== team.id))
+    } else {
+      await supabase.from('season_teams').insert({ season_id: adminSeason.id, team_id: team.id })
+      setSeasonTeamIds(ids => [...ids, team.id])
+    }
+  }
 
   const leagueOptions = leagues.length > 0
     ? leagues
@@ -324,6 +385,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
       )
     }
 
+    const inSeason = seasonTeamIds.includes(team.id)
     return (
       <div key={team.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', opacity: isActive ? 1 : 0.5 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -333,6 +395,12 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
             {team.photo_url && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 8 }}>{team.photo_url}</span>}
           </div>
           {!isActive && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '2px 6px' }}>неактивна</span>}
+          {adminSeason && (
+            <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 5, padding: '2px 8px', cursor: 'pointer', background: inSeason ? 'rgba(91,184,73,0.15)' : 'rgba(255,255,255,0.05)', color: inSeason ? '#5BB849' : 'rgba(255,255,255,0.25)', border: `1px solid ${inSeason ? 'rgba(91,184,73,0.3)' : 'rgba(255,255,255,0.1)'}` }}
+              onClick={() => toggleSeasonTeam(team)}>
+              {inSeason ? '✓ в сезоне' : '+ сезон'}
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => startEdit(team)} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
@@ -418,7 +486,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate }) {
 
 // ─── Игры ─────────────────────────────────────────────────────────────────────
 
-function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate }) {
+function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeason }) {
   const [form, setForm] = useState({
     league: 'male', home_team_id: '', away_team_id: '',
     match_date: getNextSunday(), venue: '', status: 'scheduled',
@@ -426,6 +494,11 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate }) {
   })
   const [sets, setSets] = useState([])
   const [editId, setEditId] = useState(null)
+
+  // Filter matches by admin season
+  const visibleMatches = adminSeason
+    ? matches.filter(m => m.season_id === adminSeason.id)
+    : matches
 
   const leagueOptions = leagues.length > 0
     ? leagues
@@ -448,6 +521,7 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate }) {
       away_sets: parseInt(form.away_sets) || 0,
       photo_url: form.photo_url || null,
       video_url: form.video_url || null,
+      ...(adminSeason && !editId ? { season_id: adminSeason.id } : {}),
     }
 
     const home = teamsMap[form.home_team_id]?.name || '?'
@@ -622,10 +696,15 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate }) {
 
       {/* Список игр */}
       <div style={card}>
-        {matches.length === 0 && (
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Игры</span>
+          {adminSeason && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{adminSeason.name}</span>}
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '2px 8px' }}>{visibleMatches.length}</span>
+        </div>
+        {visibleMatches.length === 0 && (
           <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет игр</div>
         )}
-        {matches.map((match, i) => {
+        {visibleMatches.map((match, i) => {
           const home = teamsMap[match.home_team_id]
           const away = teamsMap[match.away_team_id]
           const finished = match.status === 'finished'
@@ -859,7 +938,7 @@ function PlayersAdmin({ teams, userEmail }) {
 
 // ─── Награды ──────────────────────────────────────────────────────────────────
 
-function AwardsAdmin({ teams, leagues, userEmail }) {
+function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
   const [form, setForm] = useState({ league: 'male', team_id: '', player_id: '', nomination: 'setter', match_date: '', stat_value: '' })
   const [players, setPlayers] = useState([])
   const [awards, setAwards] = useState([])
@@ -906,6 +985,7 @@ function AwardsAdmin({ teams, leagues, userEmail }) {
       nomination: form.nomination,
       match_date: form.match_date,
       stat_value: parseFloat(form.stat_value) || null,
+      ...(adminSeason ? { season_id: adminSeason.id } : {}),
     })
     const playerName = players.find(p => p.id === form.player_id)?.name || form.player_id
     await logAction(userEmail, 'Добавлено', 'награда', `${playerName} — ${AWARD_CONFIG[form.nomination]?.label}`, { nomination: form.nomination })
@@ -1141,6 +1221,148 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { setEditId(lg.id); setEditData({ display_name: lg.display_name, gender: lg.gender, active: lg.active !== false }) }} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
                 <button onClick={() => deleteLeague(lg.id, lg.display_name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Сезоны ───────────────────────────────────────────────────────────────────
+
+function SeasonsAdmin({ userEmail, onUpdate }) {
+  const [seasons, setSeasons] = useState([])
+  const [form, setForm] = useState({ name: '', is_current: false })
+  const [editId, setEditId] = useState(null)
+  const [editData, setEditData] = useState({})
+
+  async function load() {
+    const { data } = await supabase.from('seasons').select('*').order('created_at', { ascending: false })
+    setSeasons(data || [])
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function addSeason(e) {
+    e.preventDefault()
+    if (!form.name.trim()) return
+    if (form.is_current) {
+      await supabase.from('seasons').update({ is_current: false }).eq('is_current', true)
+    }
+    const { error } = await supabase.from('seasons').insert({ name: form.name.trim(), is_current: form.is_current })
+    if (error) { alert('Ошибка: ' + error.message); return }
+    await logAction(userEmail, 'Добавлено', 'сезон', form.name.trim())
+    setForm({ name: '', is_current: false })
+    load()
+    onUpdate()
+  }
+
+  async function saveEdit(id) {
+    if (!editData.name?.trim()) return
+    if (editData.is_current) {
+      await supabase.from('seasons').update({ is_current: false }).neq('id', id)
+    }
+    await supabase.from('seasons').update({ name: editData.name.trim(), is_current: editData.is_current }).eq('id', id)
+    await logAction(userEmail, 'Изменено', 'сезон', editData.name.trim())
+    setEditId(null)
+    load()
+    onUpdate()
+  }
+
+  async function deleteSeason(id, name) {
+    if (!confirm(`Удалить сезон «${name}»?\n\nИгры и награды, привязанные к этому сезону, останутся в БД.`)) return
+    await supabase.from('seasons').delete().eq('id', id)
+    await logAction(userEmail, 'Удалено', 'сезон', name)
+    load()
+    onUpdate()
+  }
+
+  async function setCurrent(id) {
+    await supabase.from('seasons').update({ is_current: false }).neq('id', id)
+    await supabase.from('seasons').update({ is_current: true }).eq('id', id)
+    load()
+    onUpdate()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Подсказка */}
+      <div style={{ background: 'rgba(55,77,245,0.08)', border: '1px solid rgba(55,77,245,0.2)', borderRadius: 12, padding: '14px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+        <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Как работают сезоны:</strong><br />
+        Активный сезон (флаг «Активный») — это то, что видят посетители по умолчанию. Только один сезон может быть активным. Переключатель рабочего сезона в шапке панели определяет, в какой сезон попадают новые игры и награды.
+      </div>
+
+      {/* Форма создания */}
+      <div style={{ ...card, padding: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Создать сезон</div>
+        <form onSubmit={addSeason} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={labelStyle}>Название сезона</div>
+            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Сезон 2025–2026" style={inp} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.is_current} onChange={e => setForm(f => ({ ...f, is_current: e.target.checked }))} style={{ accentColor: '#5BB849', width: 15, height: 15 }} />
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Активный сезон (виден посетителям по умолчанию)</span>
+            </label>
+            <button type="submit" style={btnPrimary}>Создать сезон</button>
+          </div>
+        </form>
+      </div>
+
+      {/* Список сезонов */}
+      <div style={card}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Все сезоны
+        </div>
+        {seasons.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>Нет сезонов</div>
+        ) : seasons.map((s, i) => {
+          if (editId === s.id) {
+            return (
+              <div key={s.id} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'rgba(55,77,245,0.05)' }}>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={labelStyle}>Название</div>
+                  <input value={editData.name} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} autoFocus style={{ ...inp, padding: '8px 12px', fontSize: 13 }} onKeyDown={e => { if (e.key === 'Escape') setEditId(null) }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={editData.is_current} onChange={e => setEditData(d => ({ ...d, is_current: e.target.checked }))} style={{ accentColor: '#5BB849', width: 15, height: 15 }} />
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Активный сезон</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => saveEdit(s.id)} style={{ ...btnPrimary, padding: '7px 16px', fontSize: 12 }}>Сохранить</button>
+                    <button onClick={() => setEditId(null)} style={{ ...btnSecondary, padding: '7px 16px', fontSize: 12 }}>Отмена</button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          return (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: s.is_current ? '#5BB849' : 'rgba(255,255,255,0.2)', boxShadow: s.is_current ? '0 0 5px #5BB849' : 'none', flexShrink: 0 }} />
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{s.name}</span>
+                    {s.is_current && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#5BB849', background: 'rgba(91,184,73,0.15)', border: '1px solid rgba(91,184,73,0.3)', borderRadius: 5, padding: '1px 7px' }}>АКТИВНЫЙ</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                    {new Date(s.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                {!s.is_current && (
+                  <button onClick={() => setCurrent(s.id)} style={{ fontSize: 12, color: '#5BB849', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Сделать активным</button>
+                )}
+                <button onClick={() => { setEditId(s.id); setEditData({ name: s.name, is_current: s.is_current }) }} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
+                <button onClick={() => deleteSeason(s.id, s.name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
               </div>
             </div>
           )
