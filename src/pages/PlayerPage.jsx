@@ -23,7 +23,7 @@ export default function PlayerPage({ playerId, onBack }) {
       const [{ data: p }, { data: m }, { data: a }] = await Promise.all([
         supabase.from('players').select('*').eq('id', playerId).single(),
         supabase.from('team_memberships').select('*, teams(name, league)').eq('player_id', playerId).order('joined_at', { ascending: false }),
-        supabase.from('awards').select('*, teams(name)').eq('player_id', playerId).order('match_date', { ascending: false }),
+        supabase.from('awards').select('*, teams(name), seasons(name)').eq('player_id', playerId).order('match_date', { ascending: false }),
       ])
       setPlayer(p)
       setMemberships(m || [])
@@ -85,28 +85,48 @@ export default function PlayerPage({ playerId, onBack }) {
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.07)', borderRadius: 6, padding: '2px 8px' }}>{awards.length}</span>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden' }}>
-            {awards.map((a, i) => {
-              const cfg = AWARD_CONFIG[a.nomination]
-              const stat = a.nomination !== 'mvp' && a.stat_value != null
-                ? `${a.stat_value}${a.nomination === 'libero' ? '%' : ` ${cfg?.statLabel}`}`
-                : null
-              return (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <AwardBadge nomination={a.nomination} size={a.nomination === 'mvp' ? 36 : 22} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{cfg?.label}</span>
-                      {stat && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: cfg?.mid, background: `${cfg?.mid}22`, borderRadius: 6, padding: '1px 7px' }}>{stat}</span>
-                      )}
+            {(() => {
+              const rows = []
+              let lastSeasonId = undefined
+              awards.forEach((a, i) => {
+                const cfg = AWARD_CONFIG[a.nomination]
+                const stat = a.nomination !== 'mvp' && a.stat_value != null
+                  ? `${a.stat_value}${a.nomination === 'libero' ? '%' : ` ${cfg?.statLabel}`}`
+                  : null
+                const seasonId = a.season_id || null
+                const seasonName = a.seasons?.name || null
+
+                if (seasonId !== lastSeasonId) {
+                  lastSeasonId = seasonId
+                  rows.push(
+                    <div key={`season-${seasonId}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ width: 3, height: 12, borderRadius: 2, background: '#374DF5', flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        {seasonName || 'Без сезона'}
+                      </span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                      {a.teams?.name} · {new Date(a.match_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  )
+                }
+
+                rows.push(
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <AwardBadge nomination={a.nomination} size={a.nomination === 'mvp' ? 36 : 22} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{cfg?.label}</span>
+                        {stat && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: cfg?.mid, background: `${cfg?.mid}22`, borderRadius: 6, padding: '1px 7px' }}>{stat}</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                        {a.teams?.name} · {new Date(a.match_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+              return rows
+            })()}
           </div>
         </div>
       )}
