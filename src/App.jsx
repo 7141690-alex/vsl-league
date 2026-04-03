@@ -6,6 +6,7 @@ import Admin from './pages/Admin'
 import TeamPage from './pages/TeamPage'
 import PlayerPage from './pages/PlayerPage'
 import AwardsPage from './pages/AwardsPage'
+import StatsPage from './pages/Stats'
 
 const IconStandings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
@@ -28,6 +29,15 @@ const IconCalendar = () => (
   </svg>
 )
 
+const IconStats = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
+    <path d="M3 20h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M7 20V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M12 20V7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M17 20V4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+)
+
 const IconChevron = ({ open }) => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}>
     <path d="M2 4l4 4 4-4" stroke="rgba(255,255,255,0.5)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -35,8 +45,9 @@ const IconChevron = ({ open }) => (
 )
 
 const tabs = [
-  { id: 'standings', label: 'Таблица', Icon: IconStandings },
-  { id: 'schedule', label: 'Расписание', Icon: IconCalendar },
+  { id: 'standings', label: 'Таблица',    Icon: IconStandings },
+  { id: 'schedule',  label: 'Расписание', Icon: IconCalendar },
+  { id: 'stats',     label: 'Статистика', Icon: IconStats },
 ]
 
 const GENDER_ICON = { male: '♂', female: '♀', mixed: '⚥' }
@@ -288,6 +299,15 @@ export default function App() {
                 league={league}
                 seasonId={seasonId}
                 onSelectTeam={team => { setSelectedPlayer(null); setShowAwards(false); setSelectedTeam(team) }}
+              />
+            )}
+            {tab === 'stats' && (
+              <StatsPage
+                league={league}
+                seasonId={seasonId}
+                leagueName={`${GENDER_ICON[currentLeague?.gender] || ''} ${currentLeague?.display_name || league}`}
+                onBack={() => setTab('standings')}
+                onSelectPlayer={setSelectedPlayer}
               />
             )}
           </>

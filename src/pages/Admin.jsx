@@ -569,6 +569,7 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
   })
   const [sets, setSets] = useState([])
   const [editId, setEditId] = useState(null)
+  const [statsMatchId, setStatsMatchId] = useState(null)
 
   // Filter matches by admin season
   const visibleMatches = adminSeason
@@ -769,6 +770,19 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
         </form>
       </div>
 
+      {/* Панель статистики */}
+      {statsMatchId && (() => {
+        const statsMatch = visibleMatches.find(m => m.id === statsMatchId)
+        return statsMatch ? (
+          <MatchStatsPanel
+            match={statsMatch}
+            teamsMap={teamsMap}
+            adminSeason={adminSeason}
+            onClose={() => setStatsMatchId(null)}
+          />
+        ) : null
+      })()}
+
       {/* Список игр */}
       <div style={card}>
         <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -800,6 +814,15 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                {finished && (
+                  <button
+                    onClick={() => setStatsMatchId(statsMatchId === match.id ? null : match.id)}
+                    style={{ fontSize: 12, color: statsMatchId === match.id ? '#374DF5' : 'rgba(255,255,255,0.4)', background: statsMatchId === match.id ? 'rgba(55,77,245,0.12)' : 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px', borderRadius: 6 }}
+                    title="Статистика игроков"
+                  >
+                    📊
+                  </button>
+                )}
                 <button onClick={() => startEdit(match)} style={{ fontSize: 12, color: '#374DF5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Изменить</button>
                 <button onClick={() => deleteMatch(match.id, home?.name, away?.name)} style={{ fontSize: 12, color: '#FF495C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px' }}>Удалить</button>
               </div>
@@ -1658,6 +1681,188 @@ function ActivityLog() {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Статистика матча ─────────────────────────────────────────────────────────
+
+function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
+  const [homeRoster, setHomeRoster] = useState([])
+  const [awayRoster, setAwayRoster] = useState([])
+  const [stats, setStats] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => { loadData() }, [match.id])
+
+  async function loadData() {
+    const seasonId = match.season_id || adminSeason?.id
+
+    async function loadRoster(teamId) {
+      let q = supabase
+        .from('team_memberships')
+        .select('player_id, jersey_number, players(id, name, position)')
+        .eq('team_id', teamId)
+        .order('jersey_number', { ascending: true, nullsFirst: false })
+      q = seasonId ? q.eq('season_id', seasonId) : q.is('left_at', null)
+      const { data } = await q
+      return data || []
+    }
+
+    const [home, away, { data: existing }] = await Promise.all([
+      loadRoster(match.home_team_id),
+      loadRoster(match.away_team_id),
+      supabase.from('match_stats').select('*').eq('match_id', match.id),
+    ])
+
+    setHomeRoster(home)
+    setAwayRoster(away)
+
+    const map = {}
+    for (const s of (existing || [])) {
+      map[s.player_id] = {
+        attack_pts: s.attack_pts ?? 0,
+        blocks: s.blocks ?? 0,
+        aces: s.aces ?? 0,
+        assists: s.assists ?? 0,
+        reception_pct: s.reception_pct != null ? String(s.reception_pct) : '',
+      }
+    }
+    for (const m of [...home, ...away]) {
+      if (!map[m.player_id]) map[m.player_id] = { attack_pts: 0, blocks: 0, aces: 0, assists: 0, reception_pct: '' }
+    }
+    setStats(map)
+  }
+
+  function upd(pid, field, val) {
+    setStats(prev => ({ ...prev, [pid]: { ...prev[pid], [field]: val } }))
+  }
+
+  async function saveStats() {
+    setSaving(true)
+    const seasonId = match.season_id || adminSeason?.id
+    const allMembers = [
+      ...homeRoster.map(m => ({ ...m, teamId: match.home_team_id })),
+      ...awayRoster.map(m => ({ ...m, teamId: match.away_team_id })),
+    ]
+    const rows = allMembers.map(m => {
+      const s = stats[m.player_id] || {}
+      return {
+        match_id: match.id,
+        player_id: m.player_id,
+        team_id: m.teamId,
+        season_id: seasonId || null,
+        attack_pts: parseInt(s.attack_pts) || 0,
+        blocks: parseInt(s.blocks) || 0,
+        aces: parseInt(s.aces) || 0,
+        assists: parseInt(s.assists) || 0,
+        reception_pct: s.reception_pct !== '' && s.reception_pct != null ? parseFloat(s.reception_pct) : null,
+      }
+    })
+
+    await supabase.from('match_stats').delete().eq('match_id', match.id)
+    const toInsert = rows.filter(r => r.attack_pts > 0 || r.blocks > 0 || r.aces > 0 || r.assists > 0 || r.reception_pct != null)
+    if (toInsert.length > 0) await supabase.from('match_stats').insert(toInsert)
+
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const numInp = {
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 7, padding: '7px 4px', color: '#fff', fontSize: 13,
+    textAlign: 'center', outline: 'none', width: '100%', boxSizing: 'border-box',
+  }
+
+  function RosterTable({ roster, teamName }) {
+    if (roster.length === 0) return (
+      <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, padding: '8px 0 4px' }}>Состав не заполнен</div>
+    )
+    return (
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          {teamName}
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 440 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 54px 54px 54px 54px 60px', gap: 6, padding: '4px 0 8px', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div style={{ textAlign: 'center' }}>#</div>
+              <div>Игрок</div>
+              <div style={{ textAlign: 'center' }}>Очки</div>
+              <div style={{ textAlign: 'center' }}>Блоки</div>
+              <div style={{ textAlign: 'center' }}>Эйсы</div>
+              <div style={{ textAlign: 'center' }}>Пасы</div>
+              <div style={{ textAlign: 'center' }}>%Прём</div>
+            </div>
+            {roster.map(m => {
+              const s = stats[m.player_id] || { attack_pts: 0, blocks: 0, aces: 0, assists: 0, reception_pct: '' }
+              const isLibero = m.players?.position === 'libero'
+              return (
+                <div key={m.player_id} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 54px 54px 54px 54px 60px', gap: 6, alignItems: 'center', marginBottom: 7 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                    {m.jersey_number ?? '—'}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span>{m.players?.name}</span>
+                    {isLibero && <span style={{ fontSize: 9, background: 'rgba(85,184,255,0.2)', color: '#55b8ff', borderRadius: 3, padding: '1px 4px', flexShrink: 0 }}>Л</span>}
+                  </div>
+                  <input type="number" min="0" value={s.attack_pts} onChange={e => upd(m.player_id, 'attack_pts', e.target.value)} style={numInp} />
+                  <input type="number" min="0" value={s.blocks} onChange={e => upd(m.player_id, 'blocks', e.target.value)} style={numInp} />
+                  <input type="number" min="0" value={s.aces} onChange={e => upd(m.player_id, 'aces', e.target.value)} style={numInp} />
+                  <input type="number" min="0" value={s.assists} onChange={e => upd(m.player_id, 'assists', e.target.value)} style={numInp} />
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={s.reception_pct}
+                    onChange={e => upd(m.player_id, 'reception_pct', e.target.value)}
+                    placeholder={isLibero ? '%' : '—'}
+                    style={{ ...numInp, opacity: isLibero ? 1 : 0.3 }}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const homeTeam = teamsMap[match.home_team_id]
+  const awayTeam = teamsMap[match.away_team_id]
+
+  return (
+    <div style={{ ...card, padding: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#374DF5', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+            📊 Статистика матча
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+            {homeTeam?.name || '?'} <span style={{ color: 'rgba(255,255,255,0.3)' }}>vs</span> {awayTeam?.name || '?'}
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontWeight: 400, marginLeft: 8 }}>
+              {match.match_date && new Date(match.match_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+            </span>
+          </div>
+        </div>
+        <button onClick={onClose} style={{ ...btnSecondary, padding: '7px 12px', fontSize: 13, flexShrink: 0 }}>✕</button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <RosterTable roster={homeRoster} teamName={homeTeam?.name || 'Хозяева'} />
+        <RosterTable roster={awayRoster} teamName={awayTeam?.name || 'Гости'} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+        <button
+          onClick={saveStats}
+          disabled={saving}
+          style={{ ...btnPrimary, opacity: saving ? 0.6 : 1, background: saved ? 'linear-gradient(135deg, #5BB849, #4caf50)' : undefined }}
+        >
+          {saving ? 'Сохранение...' : saved ? '✓ Сохранено' : 'Сохранить статистику'}
+        </button>
+        <button onClick={onClose} style={btnSecondary}>Закрыть</button>
+      </div>
     </div>
   )
 }

@@ -322,6 +322,9 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
         </div>
       </div>
 
+      {/* Player stats */}
+      <TeamStatsSection teamId={team.id} seasonId={seasonId} players={players} onSelectPlayer={onSelectPlayer} />
+
       {/* Team nominations */}
       <TeamAwardsWidget teamId={team.id} seasonId={seasonId} />
 
@@ -370,6 +373,87 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
             <MatchRow key={m.id} match={m} teamId={team.id} teams={teams} />
           ))
         )}
+      </div>
+    </div>
+  )
+}
+
+function TeamStatsSection({ teamId, seasonId, players, onSelectPlayer }) {
+  const [statsMap, setStatsMap] = useState({})
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      const q = supabase
+        .from('match_stats')
+        .select('player_id, attack_pts, blocks, aces, assists, reception_pct')
+        .eq('team_id', teamId)
+      const { data } = seasonId ? await q.eq('season_id', seasonId) : await q
+      const map = {}
+      for (const s of (data || [])) {
+        const pid = s.player_id
+        if (!map[pid]) map[pid] = { attack_pts: 0, blocks: 0, aces: 0, assists: 0, reception_sum: 0, reception_count: 0 }
+        map[pid].attack_pts += s.attack_pts || 0
+        map[pid].blocks += s.blocks || 0
+        map[pid].aces += s.aces || 0
+        map[pid].assists += s.assists || 0
+        if (s.reception_pct != null) { map[pid].reception_sum += s.reception_pct; map[pid].reception_count++ }
+      }
+      setStatsMap(map)
+      setLoaded(true)
+    }
+    load()
+  }, [teamId, seasonId])
+
+  if (!loaded) return null
+
+  const playersWithStats = players
+    .map(m => ({ m, s: statsMap[m.player_id] }))
+    .filter(({ s }) => s && (s.attack_pts + s.blocks + s.aces + s.assists + s.reception_count) > 0)
+
+  if (playersWithStats.length === 0) return null
+
+  const colStyle = { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }
+  const valStyle = { fontSize: 13, fontWeight: 700, color: '#fff', textAlign: 'center' }
+
+  return (
+    <div style={{ marginBottom: 36 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={{ width: 3, height: 20, borderRadius: 2, background: '#FF8C42', flexShrink: 0 }} />
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Статистика игроков</span>
+      </div>
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 420 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 56px 56px 56px 64px', padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', gap: 8 }}>
+              <div style={{ ...colStyle, textAlign: 'left' }}>Игрок</div>
+              <div style={colStyle}>Очки</div>
+              <div style={colStyle}>Блоки</div>
+              <div style={colStyle}>Эйсы</div>
+              <div style={colStyle}>Пасы</div>
+              <div style={colStyle}>%Приём</div>
+            </div>
+            {playersWithStats.map(({ m, s }, i) => {
+              const p = m.players || {}
+              const recAvg = s.reception_count > 0 ? Math.round(s.reception_sum / s.reception_count * 10) / 10 : null
+              return (
+                <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 56px 56px 56px 64px', padding: '11px 16px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', alignItems: 'center', gap: 8 }}>
+                  <div
+                    onClick={() => onSelectPlayer && onSelectPlayer(m.player_id)}
+                    style={{ fontSize: 13, fontWeight: 600, color: '#fff', cursor: onSelectPlayer ? 'pointer' : 'default', textDecoration: onSelectPlayer ? 'underline' : 'none', textDecorationColor: 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ ...valStyle, color: s.attack_pts > 0 ? '#FF495C' : 'rgba(255,255,255,0.25)' }}>{s.attack_pts || '—'}</div>
+                  <div style={{ ...valStyle, color: s.blocks > 0 ? '#5BB849' : 'rgba(255,255,255,0.25)' }}>{s.blocks || '—'}</div>
+                  <div style={{ ...valStyle, color: s.aces > 0 ? '#FF8C42' : 'rgba(255,255,255,0.25)' }}>{s.aces || '—'}</div>
+                  <div style={{ ...valStyle, color: s.assists > 0 ? '#374DF5' : 'rgba(255,255,255,0.25)' }}>{s.assists || '—'}</div>
+                  <div style={{ ...valStyle, color: recAvg != null ? '#55b8ff' : 'rgba(255,255,255,0.25)' }}>{recAvg != null ? `${recAvg}%` : '—'}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </div>
   )
