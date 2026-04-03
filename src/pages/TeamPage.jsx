@@ -467,7 +467,7 @@ function TeamAwardsWidget({ teamId, seasonId }) {
       .from('awards')
       .select('*, players(name)')
       .eq('team_id', teamId)
-      .order('match_date', { ascending: false })
+      .order('created_at', { ascending: false })
     if (seasonId) query = query.eq('season_id', seasonId)
     query.then(({ data }) => setAwards(data || []))
   }, [teamId, seasonId])
