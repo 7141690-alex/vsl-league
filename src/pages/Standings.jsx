@@ -154,29 +154,31 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
       </div>
     </div>
 
-    <AwardsWidget league={league} onShowAwards={onShowAwards} />
+    <AwardsWidget league={league} seasonId={seasonId} onShowAwards={onShowAwards} />
     <CalendarWidget league={league} />
     </>
   )
 }
 
-function AwardsWidget({ league, onShowAwards }) {
+function AwardsWidget({ league, seasonId, onShowAwards }) {
   const [awards, setAwards] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      let query = supabase
         .from('awards')
         .select('*, players(name), teams(name)')
         .eq('league', league)
         .order('match_date', { ascending: false })
+      if (seasonId) query = query.eq('season_id', seasonId)
+      const { data } = await query
       setAwards(data || [])
       setLoading(false)
     }
     load()
-  }, [league])
+  }, [league, seasonId])
 
   if (loading || awards.length === 0) return null
 

@@ -7,7 +7,7 @@ const NOMINATIONS = [
   ...Object.entries(AWARD_CONFIG).map(([key, cfg]) => ({ key, label: cfg.label })),
 ]
 
-export default function AwardsPage({ league, leagueName, onBack }) {
+export default function AwardsPage({ league, seasonId, leagueName, onBack }) {
   const [awards, setAwards] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -15,16 +15,18 @@ export default function AwardsPage({ league, leagueName, onBack }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      let query = supabase
         .from('awards')
         .select('*, players(name), teams(name)')
         .eq('league', league)
         .order('match_date', { ascending: false })
+      if (seasonId) query = query.eq('season_id', seasonId)
+      const { data } = await query
       setAwards(data || [])
       setLoading(false)
     }
     load()
-  }, [league])
+  }, [league, seasonId])
 
   const filtered = filter === 'all' ? awards : awards.filter(a => a.nomination === filter)
 

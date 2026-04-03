@@ -138,7 +138,9 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
         memberQuery,
         matchQuery,
         supabase.from('teams').select('*').eq('league', league),
-        supabase.from('awards').select('player_id, nomination').eq('team_id', team.id),
+        seasonId
+          ? supabase.from('awards').select('player_id, nomination').eq('team_id', team.id).eq('season_id', seasonId)
+          : supabase.from('awards').select('player_id, nomination').eq('team_id', team.id),
       ])
       setPlayers(membershipsData || [])
       setTeams((teamsData || []).reduce((acc, t) => ({ ...acc, [t.id]: t }), {}))
@@ -296,7 +298,7 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
       </div>
 
       {/* Team nominations */}
-      <TeamAwardsWidget teamId={team.id} />
+      <TeamAwardsWidget teamId={team.id} seasonId={seasonId} />
 
       {/* Upcoming games */}
       {upcomingMatches.length > 0 && (
@@ -348,17 +350,18 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
   )
 }
 
-function TeamAwardsWidget({ teamId }) {
+function TeamAwardsWidget({ teamId, seasonId }) {
   const [awards, setAwards] = useState([])
 
   useEffect(() => {
-    supabase
+    let query = supabase
       .from('awards')
       .select('*, players(name)')
       .eq('team_id', teamId)
       .order('match_date', { ascending: false })
-      .then(({ data }) => setAwards(data || []))
-  }, [teamId])
+    if (seasonId) query = query.eq('season_id', seasonId)
+    query.then(({ data }) => setAwards(data || []))
+  }, [teamId, seasonId])
 
   if (awards.length === 0) return null
 
