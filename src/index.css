@@ -15,3 +15,10 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Fix: native select dropdown on Windows renders options with inherited white color */
+select option,
+select optgroup {
+  color: #000;
+  background: #fff;
+}
