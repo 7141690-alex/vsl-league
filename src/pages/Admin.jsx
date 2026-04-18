@@ -295,7 +295,7 @@ export default function Admin() {
 
       {activeTab === 'teams'   && <TeamsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} onUpdate={loadTeams} adminSeason={adminSeason} />}
       {activeTab === 'matches' && <MatchesAdmin  matches={matches} teams={teams} leagues={leagues} userEmail={userEmail} onUpdate={loadMatches} adminSeason={adminSeason} />}
-      {activeTab === 'players' && <PlayersAdmin  teams={teams}   userEmail={userEmail} adminSeason={adminSeason} />}
+      {activeTab === 'players' && <PlayersAdmin  teams={teams}   leagues={leagues} userEmail={userEmail} adminSeason={adminSeason} />}
       {activeTab === 'awards'  && <AwardsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} adminSeason={adminSeason} />}
       {activeTab === 'leagues' && <LeaguesAdmin  userEmail={userEmail} onUpdate={loadLeagues} />}
       {activeTab === 'seasons' && <SeasonsAdmin  userEmail={userEmail} onUpdate={loadSeasons} />}
@@ -759,9 +759,9 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
                 {sets.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', width: 48, flexShrink: 0 }}>Сет {i + 1}</span>
-                    <input type="number" min="0" max="25" placeholder="0" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} onFocus={e => e.target.select()} style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" min="0" placeholder="0" value={s.home} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, home: e.target.value } : x))} onFocus={e => e.target.select()} style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                     <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>:</span>
-                    <input type="number" min="0" max="25" placeholder="0" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} onFocus={e => e.target.select()} style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
+                    <input type="number" min="0" placeholder="0" value={s.away} onChange={e => setSets(ss => ss.map((x, j) => j === i ? { ...x, away: e.target.value } : x))} onFocus={e => e.target.select()} style={{ ...inp, width: 64, textAlign: 'center', padding: '8px' }} />
                   </div>
                 ))}
               </div>
@@ -877,11 +877,11 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
 
 // ─── Игроки ───────────────────────────────────────────────────────────────────
 
-function PlayersAdmin({ teams, userEmail, adminSeason }) {
+function PlayersAdmin({ teams, leagues, userEmail, adminSeason }) {
   const today = new Date().toISOString().slice(0, 10)
   const [players, setPlayers] = useState([])
   const [memberships, setMemberships] = useState({})
-  const [newForm, setNewForm] = useState({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '' })
+  const [newForm, setNewForm] = useState({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '', team_id: '', jersey_number: '' })
   const [genderFilter, setGenderFilter] = useState('all')
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
@@ -910,9 +910,14 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
   async function createPlayer(e) {
     e.preventDefault()
     if (!newForm.name.trim()) return
-    await supabase.from('players').insert({ name: newForm.name.trim(), gender: newForm.gender, height: parseInt(newForm.height) || null, birth_date: newForm.birth_date || null, position: newForm.position || null, position2: newForm.position2 || null, photo_url: newForm.photo_url.trim() || null })
+    const { data: created } = await supabase.from('players').insert({ name: newForm.name.trim(), gender: newForm.gender, height: parseInt(newForm.height) || null, birth_date: newForm.birth_date || null, position: newForm.position || null, position2: newForm.position2 || null, photo_url: newForm.photo_url.trim() || null }).select().single()
+    if (created && newForm.team_id) {
+      const membership = { player_id: created.id, team_id: newForm.team_id, jersey_number: parseInt(newForm.jersey_number) || null, is_captain: false, joined_at: new Date().toISOString().slice(0, 10) }
+      if (adminSeason?.id) membership.season_id = adminSeason.id
+      await supabase.from('team_memberships').insert(membership)
+    }
     await logAction(userEmail, 'Добавлено', 'игрок', newForm.name.trim(), { gender: newForm.gender })
-    setNewForm({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '' })
+    setNewForm({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '', team_id: '', jersey_number: '' })
     load()
   }
 
@@ -1009,6 +1014,27 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
             <div style={labelStyle}>Фото игрока (URL, опционально)</div>
             <input value={newForm.photo_url} onChange={e => setNewForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="https://..." style={inp} />
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 12 }}>
+            <div>
+              <div style={labelStyle}>Команда (опционально)</div>
+              <select value={newForm.team_id} onChange={e => setNewForm(f => ({ ...f, team_id: e.target.value }))} style={inp}>
+                <option value="">— не указано —</option>
+                {leagues.map(lg => {
+                  const lgTeams = teams.filter(t => t.league === lg.name)
+                  if (!lgTeams.length) return null
+                  return (
+                    <optgroup key={lg.id} label={lg.display_name || lg.name}>
+                      {lgTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </optgroup>
+                  )
+                })}
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>Номер (опционально)</div>
+              <input type="number" value={newForm.jersey_number} onChange={e => setNewForm(f => ({ ...f, jersey_number: e.target.value }))} placeholder="№" style={inp} />
+            </div>
+          </div>
           <button type="submit" style={{ ...btnPrimary, alignSelf: 'flex-start' }}>Создать</button>
         </form>
       </div>
@@ -1058,7 +1084,7 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
           const membership = memberships[player.id]
           const isEditing = editId === player.id
           const isAddingTeam = addTeamId === player.id
-          const genderTeams = teams.filter(t => t.league === (player.gender === 'female' ? 'female' : 'male'))
+          const teamsByLeague = leagues.map(lg => ({ league: lg, items: teams.filter(t => t.league === lg.name) })).filter(g => g.items.length > 0)
 
           return (
             <div key={player.id} style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
@@ -1140,7 +1166,11 @@ function PlayersAdmin({ teams, userEmail, adminSeason }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: 8, marginBottom: 10 }}>
                     <select value={memberForm.team_id} onChange={e => setMemberForm(f => ({ ...f, team_id: e.target.value }))} style={{ ...inp, padding: '8px 10px', fontSize: 12 }}>
                       <option value="">— команда —</option>
-                      {genderTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {teamsByLeague.map(g => (
+                        <optgroup key={g.league.id} label={g.league.display_name || g.league.name}>
+                          {g.items.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                     <input type="number" value={memberForm.jersey_number} onChange={e => setMemberForm(f => ({ ...f, jersey_number: e.target.value }))} placeholder="№" style={{ ...inp, padding: '8px 10px', fontSize: 12 }} />
                     <input type="date" value={memberForm.joined_at} onChange={e => setMemberForm(f => ({ ...f, joined_at: e.target.value }))} style={{ ...inp, colorScheme: 'dark', padding: '8px 6px', fontSize: 12 }} />
