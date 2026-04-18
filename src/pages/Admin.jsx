@@ -312,6 +312,21 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
   const [editingId, setEditingId] = useState(null)
   const [editingData, setEditingData] = useState({})
   const [showInactive, setShowInactive] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [editUploading, setEditUploading] = useState(false)
+
+  async function uploadLogo(file, onDone) {
+    const ext = file.name.split('.').pop()
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const setter = onDone === 'form' ? setUploading : setEditUploading
+    setter(true)
+    const { error } = await supabase.storage.from('team-logos').upload(filename, file, { upsert: true })
+    setter(false)
+    if (error) { alert('Ошибка загрузки: ' + error.message); return }
+    const { data: { publicUrl } } = supabase.storage.from('team-logos').getPublicUrl(filename)
+    if (onDone === 'form') setForm(f => ({ ...f, photo_url: publicUrl }))
+    else setEditingData(d => ({ ...d, photo_url: publicUrl }))
+  }
   const [seasonTeamIds, setSeasonTeamIds] = useState([])
 
   useEffect(() => {
@@ -432,8 +447,16 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>
-              <div style={labelStyle}>Фото (путь, напр. /teams/Unity.jpg)</div>
-              <input value={editingData.photo_url} onChange={e => setEditingData(d => ({ ...d, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={{ ...inp, padding: '8px 12px', fontSize: 13 }} />
+              <div style={labelStyle}>Логотип команды</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {editingData.photo_url && <img src={editingData.photo_url} alt="" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />}
+                <label style={{ flex: 1, cursor: 'pointer' }}>
+                  <div style={{ ...inp, padding: '8px 12px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', color: editUploading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)' }}>
+                    {editUploading ? 'Загрузка...' : (editingData.photo_url ? '↺ Заменить файл' : '↑ Загрузить файл')}
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={editUploading} onChange={e => { if (e.target.files[0]) uploadLogo(e.target.files[0], 'edit') }} />
+                </label>
+              </div>
             </div>
             <div>
               <div style={labelStyle}>Instagram (ссылка, опционально)</div>
@@ -503,8 +526,16 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <div style={labelStyle}>Фото команды (путь, напр. /teams/Unity.jpg)</div>
-              <input value={form.photo_url} onChange={e => setForm(f => ({ ...f, photo_url: e.target.value }))} placeholder="/teams/TeamName.jpg" style={inp} />
+              <div style={labelStyle}>Логотип команды</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {form.photo_url && <img src={form.photo_url} alt="" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />}
+                <label style={{ flex: 1, cursor: 'pointer' }}>
+                  <div style={{ ...inp, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', color: uploading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                    {uploading ? 'Загрузка...' : (form.photo_url ? '↺ Заменить файл' : '↑ Загрузить файл')}
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploading} onChange={e => { if (e.target.files[0]) uploadLogo(e.target.files[0], 'form') }} />
+                </label>
+              </div>
             </div>
             <div>
               <div style={labelStyle}>Instagram (ссылка, опционально)</div>
