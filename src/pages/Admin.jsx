@@ -316,16 +316,21 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
   const [editUploading, setEditUploading] = useState(false)
 
   async function uploadLogo(file, onDone) {
-    const ext = file.name.split('.').pop()
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const setter = onDone === 'form' ? setUploading : setEditUploading
     setter(true)
-    const { error } = await supabase.storage.from('team-logos').upload(filename, file, { upsert: true })
-    setter(false)
-    if (error) { alert('Ошибка загрузки: ' + error.message); return }
-    const { data: { publicUrl } } = supabase.storage.from('team-logos').getPublicUrl(filename)
-    if (onDone === 'form') setForm(f => ({ ...f, photo_url: publicUrl }))
-    else setEditingData(d => ({ ...d, photo_url: publicUrl }))
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload-logo', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok || json.error) { alert('Ошибка загрузки: ' + (json.error || res.status)); return }
+      if (onDone === 'form') setForm(f => ({ ...f, photo_url: json.url }))
+      else setEditingData(d => ({ ...d, photo_url: json.url }))
+    } catch (e) {
+      alert('Ошибка загрузки: ' + e.message)
+    } finally {
+      setter(false)
+    }
   }
   const [seasonTeamIds, setSeasonTeamIds] = useState([])
 
