@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
+import { trackPageView, trackSessionStart } from './lib/analytics'
 import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
@@ -140,6 +141,7 @@ export default function App() {
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [showAwards, setShowAwards] = useState(false)
+  const lastTrackedPageRef = useRef('')
 
   useEffect(() => {
     supabase.from('leagues').select('*').eq('active', true).order('sort_order').order('created_at')
@@ -175,6 +177,52 @@ export default function App() {
 
   const currentLeague = leagues.find(l => l.name === league) || leagues[0]
   const currentSeason = seasons.find(s => s.id === seasonId)
+  const currentPageKey = showAdmin
+    ? 'admin'
+    : selectedPlayer
+      ? 'player'
+      : selectedTeam
+        ? 'team'
+        : showAwards
+          ? 'awards'
+          : tab
+
+  useEffect(() => {
+    trackSessionStart({
+      pageKey: currentPageKey,
+      league,
+      seasonId,
+      selectedPlayer,
+      selectedTeamId: selectedTeam?.id || null,
+      tab,
+      showAwards,
+      showAdmin,
+    })
+  }, [currentPageKey, league, seasonId, selectedPlayer, selectedTeam, tab, showAwards, showAdmin])
+
+  useEffect(() => {
+    const pageFingerprint = [
+      currentPageKey,
+      league || '',
+      seasonId || '',
+      selectedTeam?.id || '',
+      selectedPlayer || '',
+    ].join('|')
+
+    if (lastTrackedPageRef.current === pageFingerprint) return
+    lastTrackedPageRef.current = pageFingerprint
+
+    trackPageView({
+      pageKey: currentPageKey,
+      league,
+      seasonId,
+      selectedPlayer,
+      selectedTeamId: selectedTeam?.id || null,
+      tab,
+      showAwards,
+      showAdmin,
+    })
+  }, [currentPageKey, league, seasonId, selectedPlayer, selectedTeam, tab, showAwards, showAdmin])
 
   if (showAdmin) {
     return (

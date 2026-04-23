@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
@@ -126,7 +126,7 @@ export default function Admin() {
     if (error) {
       // Таблица не существует или ошибка — старый режим, полный доступ
       setIsSuperAdmin(true)
-      setAllowedTabs(['teams', 'matches', 'players', 'awards', 'leagues', 'seasons', 'log'])
+      setAllowedTabs(['teams', 'matches', 'players', 'awards', 'analytics', 'leagues', 'seasons', 'log'])
     } else if (data) {
       setIsSuperAdmin(data.is_super_admin)
       setAllowedTabs(data.allowed_tabs || [])
@@ -177,6 +177,7 @@ export default function Admin() {
     { id: 'matches', label: 'Игры' },
     { id: 'players', label: 'Игроки' },
     { id: 'awards',  label: '🏅 Награды' },
+    { id: 'analytics', label: '📊 Аналитика' },
     { id: 'leagues', label: '🏆 Лиги' },
     { id: 'seasons', label: '🗓 Сезоны' },
     { id: 'log',     label: '📋 Журнал' },
@@ -297,12 +298,244 @@ export default function Admin() {
       {activeTab === 'matches' && <MatchesAdmin  matches={matches} teams={teams} leagues={leagues} userEmail={userEmail} onUpdate={loadMatches} adminSeason={adminSeason} />}
       {activeTab === 'players' && <PlayersAdmin  teams={teams}   leagues={leagues} userEmail={userEmail} adminSeason={adminSeason} />}
       {activeTab === 'awards'  && <AwardsAdmin   teams={teams}   leagues={leagues} userEmail={userEmail} adminSeason={adminSeason} />}
+      {activeTab === 'analytics' && <AnalyticsAdmin />}
       {activeTab === 'leagues' && <LeaguesAdmin  userEmail={userEmail} onUpdate={loadLeagues} />}
       {activeTab === 'seasons' && <SeasonsAdmin  userEmail={userEmail} onUpdate={loadSeasons} />}
       {activeTab === 'log'     && <ActivityLog />}
       {activeTab === 'admins'  && isSuperAdmin && <SubAdminsAdmin userEmail={userEmail} />}
     </div>
   )
+}
+
+function AnalyticsAdmin() {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    loadAnalytics()
+  }, [])
+
+  async function loadAnalytics() {
+    setLoading(true)
+    setError('')
+    try {
+      const pageSize = 1000
+      let from = 0
+      let all = []
+
+      while (true) {
+        const to = from + pageSize - 1
+        const { data, error: fetchError } = await supabase
+          .from('site_visit_events')
+          .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer')
+          .order('created_at', { ascending: false })
+          .range(from, to)
+
+        if (fetchError) throw fetchError
+        const chunk = data || []
+        all = [...all, ...chunk]
+        if (chunk.length < pageSize) break
+        from += pageSize
+      }
+
+      setEvents(all)
+    } catch (e) {
+      setError(e.message || 'Ошибка загрузки аналитики')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const stats = useMemo(() => {
+    const now = Date.now()
+    const dayMs = 24 * 60 * 60 * 1000
+    const periods = [
+      { key: 'day', label: 'За сутки', start: now - dayMs },
+      { key: 'week', label: 'За неделю', start: now - 7 * dayMs },
+      { key: 'month', label: 'За месяц', start: now - 30 * dayMs },
+      { key: 'year', label: 'За год', start: now - 365 * dayMs },
+      { key: 'all', label: 'С начала сайта', start: null },
+    ]
+
+    const prepared = events.map(ev => ({
+      ...ev,
+      ts: Date.parse(ev.created_at),
+      isPageView: ev.event_type === 'page_view',
+      refHost: extractReferrerHost(ev.referrer),
+    }))
+
+    const periodStats = periods.map(period => {
+      const rows = period.start ? prepared.filter(r => r.ts >= period.start) : prepared
+      return buildPeriodStats(rows, period.label)
+    })
+
+    const allRows = prepared
+    const pageRows = allRows.filter(r => r.isPageView)
+    const byPage = countBy(pageRows, r => r.page_key || 'unknown')
+    const byRef = countBy(pageRows, r => r.refHost)
+    const byLeague = countBy(pageRows, r => r.league || 'unknown')
+
+    return {
+      periodStats,
+      topPages: topEntries(byPage, 7),
+      topSources: topEntries(byRef, 7),
+      byLeague: topEntries(byLeague, 5),
+      totalEvents: prepared.length,
+    }
+  }, [events])
+
+  if (loading) return <div style={{ color: 'rgba(255,255,255,0.45)' }}>Загрузка аналитики...</div>
+
+  if (error) {
+    return (
+      <div style={{ ...card, padding: 16, border: '1px solid rgba(255,73,92,0.25)' }}>
+        <div style={{ color: '#FF495C', fontSize: 13, fontWeight: 700 }}>Ошибка аналитики</div>
+        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 6 }}>{error}</div>
+        <button onClick={loadAnalytics} style={{ ...btnSecondary, marginTop: 14, padding: '8px 14px' }}>Повторить</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ ...card, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>Аналитика посещений</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+              Всего событий: <b style={{ color: '#fff' }}>{stats.totalEvents}</b>
+            </div>
+          </div>
+          <button onClick={loadAnalytics} style={{ ...btnSecondary, padding: '8px 14px' }}>Обновить</button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 12 }}>
+        {stats.periodStats.map(item => (
+          <div key={item.label} style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 8 }}>{item.label}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+              <StatTile label="Уникальные посетители" value={item.uniqueVisitors} />
+              <StatTile label="Сессии" value={item.uniqueSessions} />
+              <StatTile label="Просмотры страниц" value={item.pageViews} />
+              <StatTile label="События всего" value={item.eventsTotal} />
+              <StatTile label="Мужская лига (male)" value={item.maleViews} />
+              <StatTile label="Женская лига (female)" value={item.femaleViews} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ ...card, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 }}>Популярные страницы</div>
+        <SimpleList rows={stats.topPages} emptyText="Пока нет page_view событий" />
+      </div>
+
+      <div style={{ ...card, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 }}>Источники трафика</div>
+        <SimpleList rows={stats.topSources} emptyText="Нет источников" />
+      </div>
+
+      <div style={{ ...card, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 }}>Разбивка по лигам</div>
+        <SimpleList rows={stats.byLeague} emptyText="Нет данных по лигам" />
+      </div>
+    </div>
+  )
+}
+
+function StatTile({ label, value }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 10,
+      padding: '10px 12px',
+    }}>
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', lineHeight: 1.1 }}>{value}</div>
+    </div>
+  )
+}
+
+function SimpleList({ rows, emptyText }) {
+  if (!rows.length) return <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {rows.map(row => (
+        <div
+          key={row.key}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 8,
+            padding: '7px 10px',
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 12, color: '#fff' }}>{row.key}</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#8b97ff' }}>{row.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function extractReferrerHost(referrer) {
+  if (!referrer) return 'direct'
+  try {
+    return new URL(referrer).host || 'direct'
+  } catch {
+    return referrer
+  }
+}
+
+function countBy(items, keyGetter) {
+  const map = new Map()
+  for (const item of items) {
+    const key = keyGetter(item)
+    map.set(key, (map.get(key) || 0) + 1)
+  }
+  return map
+}
+
+function topEntries(map, count) {
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count)
+    .map(([key, value]) => ({ key, value }))
+}
+
+function buildPeriodStats(rows, label) {
+  const visitors = new Set()
+  const sessions = new Set()
+  let pageViews = 0
+  let maleViews = 0
+  let femaleViews = 0
+
+  for (const row of rows) {
+    if (row.visitor_id) visitors.add(row.visitor_id)
+    if (row.session_id) sessions.add(row.session_id)
+    if (row.isPageView) {
+      pageViews += 1
+      if (row.league === 'male') maleViews += 1
+      if (row.league === 'female') femaleViews += 1
+    }
+  }
+
+  return {
+    label,
+    uniqueVisitors: visitors.size,
+    uniqueSessions: sessions.size,
+    pageViews,
+    eventsTotal: rows.length,
+    maleViews,
+    femaleViews,
+  }
 }
 
 // ─── Команды ─────────────────────────────────────────────────────────────────
@@ -2005,6 +2238,7 @@ const TAB_OPTIONS = [
   { id: 'matches', label: 'Игры' },
   { id: 'players', label: 'Игроки' },
   { id: 'awards',  label: 'Награды' },
+  { id: 'analytics', label: 'Аналитика' },
   { id: 'leagues', label: 'Лиги' },
   { id: 'seasons', label: 'Сезоны' },
   { id: 'log',     label: 'Журнал' },
