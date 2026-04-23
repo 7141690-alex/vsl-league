@@ -328,7 +328,7 @@ function AnalyticsAdmin() {
         const to = from + pageSize - 1
         const { data, error: fetchError } = await supabase
           .from('site_visit_events')
-          .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer')
+          .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer, metadata')
           .order('created_at', { ascending: false })
           .range(from, to)
 
@@ -375,12 +375,23 @@ function AnalyticsAdmin() {
     const byPage = countBy(pageRows, r => r.page_key || 'unknown')
     const byRef = countBy(pageRows, r => r.refHost)
     const byLeague = countBy(pageRows, r => r.league || 'unknown')
+    const visitorDevice = new Map()
+
+    for (const row of allRows) {
+      if (!row.visitor_id || visitorDevice.has(row.visitor_id)) continue
+      visitorDevice.set(row.visitor_id, detectDeviceCategory(row))
+    }
+
+    const byDevice = countBy([...visitorDevice.values()], value => value)
+    const uniqueVisitorsTotal = visitorDevice.size
 
     return {
       periodStats,
       topPages: topEntries(byPage, 7),
       topSources: topEntries(byRef, 7),
       byLeague: topEntries(byLeague, 5),
+      deviceSplit: buildPercentageRows(byDevice, uniqueVisitorsTotal),
+      uniqueVisitorsTotal,
       totalEvents: prepared.length,
     }
   }, [events])
@@ -441,6 +452,14 @@ function AnalyticsAdmin() {
         <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 }}>Разбивка по лигам</div>
         <SimpleList rows={stats.byLeague} emptyText="Нет данных по лигам" />
       </div>
+
+      <div style={{ ...card, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Устройства пользователей</div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
+          По уникальным посетителям за все время: {stats.uniqueVisitorsTotal}
+        </div>
+        <PercentageList rows={stats.deviceSplit} emptyText="Недостаточно данных по устройствам" />
+      </div>
     </div>
   )
 }
@@ -485,6 +504,34 @@ function SimpleList({ rows, emptyText }) {
   )
 }
 
+function PercentageList({ rows, emptyText }) {
+  if (!rows.length) return <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {rows.map(row => (
+        <div
+          key={row.key}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 8,
+            padding: '7px 10px',
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 12, color: '#fff' }}>{row.key}</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#8b97ff' }}>
+            {row.value} ({row.percent}%)
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function extractReferrerHost(referrer) {
   if (!referrer) return 'direct'
   try {
@@ -494,6 +541,17 @@ function extractReferrerHost(referrer) {
   }
 }
 
+function detectDeviceCategory(row) {
+  const ua = String(row?.metadata?.device?.user_agent || '').toLowerCase()
+  const platform = String(row?.metadata?.device?.platform || '').toLowerCase()
+
+  if (ua.includes('android')) return 'Android телефон'
+  if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'iPhone/iPad'
+  if (ua.includes('windows') || platform.includes('win')) return 'Windows'
+  if (ua.includes('macintosh') || ua.includes('mac os') || platform.includes('mac')) return 'Mac'
+  return 'Другое'
+}
+
 function countBy(items, keyGetter) {
   const map = new Map()
   for (const item of items) {
@@ -501,6 +559,17 @@ function countBy(items, keyGetter) {
     map.set(key, (map.get(key) || 0) + 1)
   }
   return map
+}
+
+function buildPercentageRows(map, total) {
+  if (!total) return []
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, value]) => ({
+      key,
+      value,
+      percent: Number(((value / total) * 100).toFixed(1)),
+    }))
 }
 
 function topEntries(map, count) {
