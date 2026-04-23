@@ -311,6 +311,7 @@ function AnalyticsAdmin() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [periodKey, setPeriodKey] = useState('week')
 
   useEffect(() => {
     loadAnalytics()
@@ -354,8 +355,9 @@ function AnalyticsAdmin() {
       { key: 'day', label: 'За сутки', start: now - dayMs },
       { key: 'week', label: 'За неделю', start: now - 7 * dayMs },
       { key: 'month', label: 'За месяц', start: now - 30 * dayMs },
+      { key: 'threeMonths', label: 'За 3 месяца', start: now - 90 * dayMs },
+      { key: 'sixMonths', label: 'За 6 месяцев', start: now - 180 * dayMs },
       { key: 'year', label: 'За год', start: now - 365 * dayMs },
-      { key: 'all', label: 'С начала сайта', start: null },
     ]
 
     const prepared = events.map(ev => ({
@@ -365,36 +367,37 @@ function AnalyticsAdmin() {
       refHost: extractReferrerHost(ev.referrer),
     }))
 
-    const periodStats = periods.map(period => {
-      const rows = period.start ? prepared.filter(r => r.ts >= period.start) : prepared
-      return buildPeriodStats(rows, period.label)
-    })
+    const selectedPeriod = periods.find(p => p.key === periodKey) || periods[1]
+    const filteredRows = selectedPeriod.start
+      ? prepared.filter(r => r.ts >= selectedPeriod.start)
+      : prepared
 
-    const allRows = prepared
-    const pageRows = allRows.filter(r => r.isPageView)
+    const periodStats = buildPeriodStats(filteredRows)
+    const pageRows = filteredRows.filter(r => r.isPageView)
     const byPage = countBy(pageRows, r => r.page_key || 'unknown')
     const byRef = countBy(pageRows, r => r.refHost)
-    const byLeague = countBy(pageRows, r => r.league || 'unknown')
     const visitorDevice = new Map()
 
-    for (const row of allRows) {
+    for (const row of filteredRows) {
       if (!row.visitor_id || visitorDevice.has(row.visitor_id)) continue
       visitorDevice.set(row.visitor_id, detectDeviceCategory(row))
     }
 
     const byDevice = countBy([...visitorDevice.values()], value => value)
     const uniqueVisitorsTotal = visitorDevice.size
+    const trend = buildDailyTrend(filteredRows, 21)
 
     return {
+      periods,
+      selectedPeriodLabel: selectedPeriod.label,
       periodStats,
       topPages: topEntries(byPage, 7),
       topSources: topEntries(byRef, 7),
-      byLeague: topEntries(byLeague, 5),
       deviceSplit: buildPercentageRows(byDevice, uniqueVisitorsTotal),
       uniqueVisitorsTotal,
-      totalEvents: prepared.length,
+      trend,
     }
-  }, [events])
+  }, [events, periodKey])
 
   if (loading) return <div style={{ color: 'rgba(255,255,255,0.45)' }}>Загрузка аналитики...</div>
 
@@ -415,27 +418,61 @@ function AnalyticsAdmin() {
           <div>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>Аналитика посещений</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-              Всего событий: <b style={{ color: '#fff' }}>{stats.totalEvents}</b>
+              Период: <b style={{ color: '#fff' }}>{stats.selectedPeriodLabel}</b>
             </div>
           </div>
           <button onClick={loadAnalytics} style={{ ...btnSecondary, padding: '8px 14px' }}>Обновить</button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 12 }}>
-        {stats.periodStats.map(item => (
-          <div key={item.label} style={{ ...card, padding: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 8 }}>{item.label}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-              <StatTile label="Уникальные посетители" value={item.uniqueVisitors} />
-              <StatTile label="Сессии" value={item.uniqueSessions} />
-              <StatTile label="Просмотры страниц" value={item.pageViews} />
-              <StatTile label="События всего" value={item.eventsTotal} />
-              <StatTile label="Мужская лига (male)" value={item.maleViews} />
-              <StatTile label="Женская лига (female)" value={item.femaleViews} />
-            </div>
-          </div>
-        ))}
+      <div style={{ ...card, padding: 14 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {stats.periods.map(period => {
+            const active = period.key === periodKey
+            return (
+              <button
+                key={period.key}
+                onClick={() => setPeriodKey(period.key)}
+                style={active ? {
+                  background: 'linear-gradient(135deg, #374DF5, #6366f1)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                } : {
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'rgba(255,255,255,0.55)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {period.label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+          <StatTile label="Уникальные посетители" value={stats.periodStats.uniqueVisitors} />
+          <StatTile label="Сессии" value={stats.periodStats.uniqueSessions} />
+          <StatTile label="Просмотры страниц" value={stats.periodStats.pageViews} />
+        </div>
+      </div>
+
+      <div style={{ ...card, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 }}>Тренд по дням</div>
+        <LineChart
+          rows={stats.trend}
+          emptyText="Недостаточно данных для графика"
+          leftLabel="Уникальные"
+          rightLabel="Просмотры"
+        />
       </div>
 
       <div style={{ ...card, padding: 14 }}>
@@ -449,16 +486,14 @@ function AnalyticsAdmin() {
       </div>
 
       <div style={{ ...card, padding: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 }}>Разбивка по лигам</div>
-        <SimpleList rows={stats.byLeague} emptyText="Нет данных по лигам" />
-      </div>
-
-      <div style={{ ...card, padding: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Устройства пользователей</div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
-          По уникальным посетителям за все время: {stats.uniqueVisitorsTotal}
+          По уникальным посетителям за выбранный период: {stats.uniqueVisitorsTotal}
         </div>
         <PercentageList rows={stats.deviceSplit} emptyText="Недостаточно данных по устройствам" />
+        <div style={{ marginTop: 12 }}>
+          <BarChart rows={stats.deviceSplit} emptyText="" />
+        </div>
       </div>
     </div>
   )
@@ -532,6 +567,69 @@ function PercentageList({ rows, emptyText }) {
   )
 }
 
+function LineChart({ rows, emptyText, leftLabel, rightLabel }) {
+  if (!rows.length) return <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div>
+  const width = 760
+  const height = 220
+  const padX = 36
+  const padY = 22
+  const innerW = width - padX * 2
+  const innerH = height - padY * 2
+  const maxValue = Math.max(1, ...rows.map(r => Math.max(r.uniqueVisitors, r.pageViews)))
+
+  const x = i => padX + (i * innerW) / Math.max(1, rows.length - 1)
+  const y = v => padY + innerH - (v / maxValue) * innerH
+  const toPath = key => rows.map((r, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(r[key])}`).join(' ')
+
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(step => {
+    const yy = padY + innerH - innerH * step
+    const label = Math.round(maxValue * step)
+    return { yy, label }
+  })
+
+  return (
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', minWidth: 420, height: 220 }}>
+        <rect x="0" y="0" width={width} height={height} rx="10" fill="rgba(255,255,255,0.01)" />
+        {grid.map(g => (
+          <g key={g.yy}>
+            <line x1={padX} y1={g.yy} x2={width - padX} y2={g.yy} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+            <text x={8} y={g.yy + 4} fill="rgba(255,255,255,0.4)" fontSize="10">{g.label}</text>
+          </g>
+        ))}
+        <path d={toPath('pageViews')} fill="none" stroke="#8b97ff" strokeWidth="2.5" />
+        <path d={toPath('uniqueVisitors')} fill="none" stroke="#5BB849" strokeWidth="2.5" />
+      </svg>
+      <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, color: '#5BB849', fontWeight: 700 }}>● {leftLabel}</span>
+        <span style={{ fontSize: 11, color: '#8b97ff', fontWeight: 700 }}>● {rightLabel}</span>
+      </div>
+      <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+        <span>{rows[0]?.dateLabel}</span>
+        <span>{rows[rows.length - 1]?.dateLabel}</span>
+      </div>
+    </div>
+  )
+}
+
+function BarChart({ rows, emptyText }) {
+  if (!rows.length) return emptyText ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div> : null
+  const max = Math.max(1, ...rows.map(r => r.percent))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {rows.map(row => (
+        <div key={row.key} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 56px', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{row.key}</span>
+          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden', height: 8 }}>
+            <div style={{ width: `${(row.percent / max) * 100}%`, background: 'linear-gradient(90deg, #6366f1, #8b97ff)', height: '100%' }} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'right' }}>{row.percent}%</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function extractReferrerHost(referrer) {
   if (!referrer) return 'direct'
   try {
@@ -572,6 +670,42 @@ function buildPercentageRows(map, total) {
     }))
 }
 
+function buildDailyTrend(rows, days) {
+  const dayMs = 24 * 60 * 60 * 1000
+  const now = new Date()
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const buckets = []
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end.getTime() - i * dayMs)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    buckets.push({
+      key,
+      dateLabel: `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`,
+      visitorSet: new Set(),
+      pageViews: 0,
+    })
+  }
+
+  const map = new Map(buckets.map(b => [b.key, b]))
+
+  for (const row of rows) {
+    if (!row.ts) continue
+    const d = new Date(row.ts)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const bucket = map.get(key)
+    if (!bucket) continue
+    if (row.visitor_id) bucket.visitorSet.add(row.visitor_id)
+    if (row.isPageView) bucket.pageViews += 1
+  }
+
+  return buckets.map(b => ({
+    dateLabel: b.dateLabel,
+    uniqueVisitors: b.visitorSet.size,
+    pageViews: b.pageViews,
+  }))
+}
+
 function topEntries(map, count) {
   return [...map.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -579,31 +713,23 @@ function topEntries(map, count) {
     .map(([key, value]) => ({ key, value }))
 }
 
-function buildPeriodStats(rows, label) {
+function buildPeriodStats(rows) {
   const visitors = new Set()
   const sessions = new Set()
   let pageViews = 0
-  let maleViews = 0
-  let femaleViews = 0
 
   for (const row of rows) {
     if (row.visitor_id) visitors.add(row.visitor_id)
     if (row.session_id) sessions.add(row.session_id)
     if (row.isPageView) {
       pageViews += 1
-      if (row.league === 'male') maleViews += 1
-      if (row.league === 'female') femaleViews += 1
     }
   }
 
   return {
-    label,
     uniqueVisitors: visitors.size,
     uniqueSessions: sessions.size,
     pageViews,
-    eventsTotal: rows.length,
-    maleViews,
-    femaleViews,
   }
 }
 
