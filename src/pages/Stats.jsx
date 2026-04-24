@@ -21,6 +21,7 @@ function getWeekStart(dateStr) {
 
 export default function StatsPage({ league, seasonId, leagueName, onBack, onSelectPlayer }) {
   const [rawStats, setRawStats] = useState([])
+  const [mvpAwards, setMvpAwards] = useState([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('season')
   const [weeks, setWeeks] = useState([])
@@ -32,14 +33,24 @@ export default function StatsPage({ league, seasonId, leagueName, onBack, onSele
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
-      .from('match_stats')
-      .select('player_id, attack_pts, blocks, aces, assists, reception_pct, players(id, name, position), teams(name), matches!inner(match_date, league, season_id)')
-      .eq('matches.league', league)
-      .eq('matches.season_id', seasonId)
+    const [{ data: statsData }, { data: mvpAwardsData }] = await Promise.all([
+      supabase
+        .from('match_stats')
+        .select('player_id, attack_pts, blocks, aces, assists, reception_pct, players(id, name, position), teams(name), matches!inner(match_date, league, season_id)')
+        .eq('matches.league', league)
+        .eq('matches.season_id', seasonId),
+      supabase
+        .from('awards')
+        .select('player_id, match_date')
+        .eq('league', league)
+        .eq('season_id', seasonId)
+        .eq('nomination', 'mvp'),
+    ])
 
-    const rows = data || []
+    const rows = statsData || []
     setRawStats(rows)
+
+    setMvpAwards(mvpAwardsData || [])
 
     const weekSet = new Set()
     for (const r of rows) {
@@ -56,6 +67,16 @@ export default function StatsPage({ league, seasonId, leagueName, onBack, onSele
     if (!s.matches?.match_date || !selectedWeek) return false
     return Math.abs(getWeekStart(s.matches.match_date) - selectedWeek) < 1000
   })
+
+  const mvpCounts = {}
+  const filteredMvpAwards = viewMode === 'season' ? mvpAwards : mvpAwards.filter(a => {
+    if (!a.match_date || !selectedWeek) return false
+    return Math.abs(getWeekStart(a.match_date) - selectedWeek) < 1000
+  })
+  for (const award of filteredMvpAwards) {
+    if (!award.player_id) continue
+    mvpCounts[award.player_id] = (mvpCounts[award.player_id] || 0) + 1
+  }
 
   // Агрегируем по игроку
   const playerMap = {}
@@ -84,7 +105,7 @@ export default function StatsPage({ league, seasonId, leagueName, onBack, onSele
   const players = Object.values(playerMap).map(p => ({
     ...p,
     reception_avg: p.reception_count > 0 ? Math.round(p.reception_sum / p.reception_count * 10) / 10 : null,
-    mvp: p.attack_pts + p.blocks + p.aces + p.assists,
+    mvp: mvpCounts[p.player_id] || 0,
   }))
 
   if (loading) return (
