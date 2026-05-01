@@ -23,7 +23,8 @@ export default defineConfig({
       manifest: {
         name: 'VSL — Volleyball Super League',
         short_name: 'VSL',
-        description: 'Турнирная таблица, расписание и составы команд',
+        description:
+          'ВСЛ (VSL) — любительская волейбольная лига в Ташкенте: таблица, расписание, составы команд.',
         theme_color: '#0f1117',
         background_color: '#0f1117',
         display: 'standalone',

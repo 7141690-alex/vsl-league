@@ -9,6 +9,13 @@
 ## Что это
 Веб-приложение для управления волейбольной лигой: турнирная таблица, расписание матчей, составы команд. React + Vite + Supabase + Tailwind CSS v4. PWA (устанавливается на телефон).
 
+### SEO и индексация
+- **`index.html`**: `lang="ru"`, title/description/keywords (ВСЛ, VSL, Ташкент, волейбольная лига, любительская лига), canonical `https://vsl-league.vercel.app/`, Open Graph и Twitter Card, geo-мета для Ташкента, JSON-LD `SportsLeague` (Schema.org).
+- **`public/robots.txt`**: `Allow: /`, ссылка на sitemap.
+- **`public/sitemap.xml`**: главная страница (SPA без path-маршрутов — один URL).
+- После смены продакшен-домена обновить canonical, og:url, og:image, sitemap и JSON-LD `url`.
+- Регистрация в [Google Search Console](https://search.google.com/search-console) и [Яндекс.Вебмастер](https://webmaster.yandex.ru): добавить сайт, подтвердить владение, указать sitemap `https://vsl-league.vercel.app/sitemap.xml`.
+
 ## Стек
 - **Frontend**: React 19, Vite 8, Tailwind CSS v4
 - **База данных**: Supabase (PostgreSQL) — `https://gvkdumzyhdguupdhcqeb.supabase.co`
