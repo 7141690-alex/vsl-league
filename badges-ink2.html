@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ink Sketch Badges v2</title>
+  <style>
+    body { background: #0d0d1a; font-family: Arial, sans-serif; padding: 40px; }
+    h3 { color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 400; margin: 36px 0 14px; letter-spacing: 2px; text-transform: uppercase; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 24px; }
+    .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
+    .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .opt { color: rgba(255,255,255,0.2); font-size: 9px; text-align: center; }
+    .sizes { display: flex; gap: 10px; align-items: center; }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0">
+  <defs>
+    <filter id="ink" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ─── MVP (для сравнения) ─────────────────────────────── -->
+<h3>MVP — эталон (нравится)</h3>
+<div class="row">
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17,42 L17,28 L24,35 L32,17 L40,35 L47,28 L47,42 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.85"/>
+          <path d="M15,42 L49,42" stroke-width="2.5" fill="none"/>
+          <circle cx="32" cy="17" r="2.5" fill="#1a0800" stroke="none"/>
+          <circle cx="17" cy="28" r="2" fill="#1a0800" stroke="none"/>
+          <circle cx="47" cy="28" r="2" fill="#1a0800" stroke="none"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17,42 L17,28 L24,35 L32,17 L40,35 L47,28 L47,42 Z" stroke-width="2.5" fill="#1a0800" fill-opacity="0.85"/>
+          <path d="M15,42 L49,42" stroke-width="3" fill="none"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">MVP / Корона</div>
+  </div>
+</div>
+
+<!-- ─── СВЯЗУЮЩИЙ ─────────────────────────────────────────── -->
+<h3>Связующий — 3 варианта</h3>
+<div class="row">
+
+  <!-- Вариант 1: Бриллиант (позиция рук при пасе) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Бриллиант / ромб (форма рук связующего) -->
+          <path d="M32,16 L46,30 L32,46 L18,30 Z" stroke-width="2.2" fill="#1a0800" fill-opacity="0.12"/>
+          <!-- Верхняя грань разбита -->
+          <path d="M32,16 L22,26 L32,30 L42,26 Z" stroke-width="1.8" fill="#1a0800" fill-opacity="0.6"/>
+          <path d="M18,30 L32,30 L46,30" stroke-width="1.5" fill="none"/>
+          <path d="M22,26 L18,30 L28,46 M42,26 L46,30 L36,46 L32,46" stroke-width="1.5" fill="none"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32,16 L46,30 L32,46 L18,30 Z" stroke-width="2.5" fill="#1a0800" fill-opacity="0.12"/>
+          <path d="M32,16 L22,26 L32,30 L42,26 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.6"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Бриллиант / форма рук</div>
+  </div>
+
+  <!-- Вариант 2: Перекрещённые стрелки вверх (пас в обе стороны) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- Две стрелки вверх-в стороны (пас влево и вправо) -->
+          <path d="M32,46 L32,24" stroke-width="3"/>
+          <!-- Левая стрелка -->
+          <path d="M32,28 L20,20" stroke-width="2.5"/>
+          <path d="M20,20 L20,26 M20,20 L26,20" stroke-width="2"/>
+          <!-- Правая стрелка -->
+          <path d="M32,28 L44,20" stroke-width="2.5"/>
+          <path d="M44,20 L44,26 M44,20 L38,20" stroke-width="2"/>
+          <!-- Мяч снизу -->
+          <circle cx="32" cy="46" r="5" stroke-width="2"/>
+          <path d="M27,46 C29,43 35,43 37,46" stroke-width="1.2"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M32,46 L32,24" stroke-width="3"/>
+          <path d="M32,28 L20,20" stroke-width="2.5"/>
+          <path d="M20,20 L20,26 M20,20 L26,20" stroke-width="2"/>
+          <path d="M32,28 L44,20" stroke-width="2.5"/>
+          <path d="M44,20 L44,26 M44,20 L38,20" stroke-width="2"/>
+          <circle cx="32" cy="46" r="5" stroke-width="2.5"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Пас в обе стороны</div>
+  </div>
+
+  <!-- Вариант 3: Буква Y (три пути: приём и два паса) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- Растопыренные пальцы / веер вверх -->
+          <path d="M32,48 L32,32" stroke-width="3.5"/>
+          <path d="M32,34 L20,20" stroke-width="2.8"/>
+          <path d="M32,34 L26,18" stroke-width="2.5"/>
+          <path d="M32,34 L32,17" stroke-width="2.5"/>
+          <path d="M32,34 L38,18" stroke-width="2.5"/>
+          <path d="M32,34 L44,20" stroke-width="2.8"/>
+          <!-- Кисть -->
+          <path d="M28,38 C30,36 34,36 36,38" stroke-width="2"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M32,48 L32,32" stroke-width="3.5"/>
+          <path d="M32,34 L20,20 M32,34 L26,18 M32,34 L32,17 M32,34 L38,18 M32,34 L44,20" stroke-width="2.5"/>
+          <path d="M28,38 C30,36 34,36 36,38" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Растопыренные пальцы</div>
+  </div>
+
+</div>
+
+<!-- ─── ПОДАЮЩИЙ ──────────────────────────────────────────── -->
+<h3>Подающий — 3 варианта</h3>
+<div class="row">
+
+  <!-- Вариант 1: Стрела вверх (траектория подачи) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Жирная стрела вверх -->
+          <path d="M32,48 L32,20" stroke-width="3.5" fill="none"/>
+          <path d="M20,30 L32,16 L44,30" stroke-width="3" fill="#1a0800" fill-opacity="0.85"/>
+          <!-- Линии скорости -->
+          <path d="M22,42 L26,38 M22,36 L26,32" stroke-width="1.5" fill="none" stroke-opacity="0.5"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32,48 L32,20" stroke-width="4" fill="none"/>
+          <path d="M20,30 L32,16 L44,30" stroke-width="3" fill="#1a0800" fill-opacity="0.85"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Стрела вверх</div>
+  </div>
+
+  <!-- Вариант 2: Молния (мощная подача) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Молния -->
+          <path d="M38,15 L24,33 L33,33 L26,50 L42,29 L33,29 L38,15 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.85"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M38,15 L24,33 L33,33 L26,50 L42,29 L33,29 L38,15 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.85"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Молния</div>
+  </div>
+
+  <!-- Вариант 3: Рука с мячом вверху (жест подачи) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- Рука вверх -->
+          <path d="M32,50 L32,30" stroke-width="5"/>
+          <!-- Мяч в руке -->
+          <circle cx="32" cy="22" r="8" stroke-width="2.2" fill="#f5edcf"/>
+          <circle cx="32" cy="22" r="8" stroke-width="2.2"/>
+          <!-- Линии мяча -->
+          <path d="M24,22 C27,18 37,18 40,22" stroke-width="1.2"/>
+          <path d="M24,22 C27,26 37,26 40,22" stroke-width="1.2"/>
+          <path d="M32,14 L32,30" stroke-width="1.2"/>
+          <!-- Линии удара -->
+          <path d="M42,18 L46,15 M43,23 L47,22" stroke-width="1.5" stroke-dasharray="1,2"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M32,50 L32,30" stroke-width="5"/>
+          <circle cx="32" cy="22" r="8" stroke-width="2.5" fill="#f5edcf"/>
+          <path d="M24,22 C27,18 37,18 40,22 M24,22 C27,26 37,26 40,22 M32,14 L32,30" stroke-width="1.3"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Рука с мячом</div>
+  </div>
+
+</div>
+
+<!-- ─── АТАКУЮЩИЙ ──────────────────────────────────────────── -->
+<h3>Атакующий — 3 варианта</h3>
+<div class="row">
+
+  <!-- Вариант 1: Молния вниз -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Молния вниз -->
+          <path d="M26,15 L40,32 L31,32 L38,50 L22,31 L31,31 L26,15 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.85"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <path d="M26,15 L40,32 L31,32 L38,50 L22,31 L31,31 L26,15 Z" stroke="#1a0800" stroke-width="2" fill="#1a0800" fill-opacity="0.85" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="opt">Молния (удар)</div>
+  </div>
+
+  <!-- Вариант 2: Кулак вниз -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Рука сверху вниз -->
+          <path d="M32,16 L32,36" stroke-width="5" fill="none"/>
+          <!-- Кулак -->
+          <rect x="24" y="36" width="16" height="12" rx="3" stroke-width="2" fill="#1a0800" fill-opacity="0.8"/>
+          <!-- Большой палец -->
+          <path d="M24,40 L20,38 C19,37 20,35 22,36 L24,37" stroke-width="1.8" fill="none"/>
+          <!-- Линии удара -->
+          <path d="M20,46 L16,50 M26,48 L24,52 M36,48 L38,52" stroke-width="1.5" stroke-dasharray="1,2" fill="none"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32,16 L32,36" stroke-width="6" fill="none"/>
+          <rect x="24" y="36" width="16" height="12" rx="3" stroke-width="2.5" fill="#1a0800" fill-opacity="0.8"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Кулак вниз</div>
+  </div>
+
+  <!-- Вариант 3: Стрела вниз острая -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Стрела-копьё вниз -->
+          <path d="M32,16 L32,42" stroke-width="3.5" fill="none"/>
+          <path d="M20,34 L32,50 L44,34" stroke-width="3" fill="#1a0800" fill-opacity="0.85"/>
+          <!-- Хвост -->
+          <path d="M26,20 L32,16 L38,20" stroke-width="2" fill="none"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32,16 L32,42" stroke-width="4" fill="none"/>
+          <path d="M20,34 L32,50 L44,34" stroke-width="3" fill="#1a0800" fill-opacity="0.85"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Стрела вниз</div>
+  </div>
+
+</div>
+
+<!-- ─── БЛОКИРУЮЩИЙ ───────────────────────────────────────── -->
+<h3>Блокирующий — 3 варианта</h3>
+<div class="row">
+
+  <!-- Вариант 1: Щит -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32,16 L48,22 L48,36 C48,44 32,50 32,50 C32,50 16,44 16,36 L16,22 Z" stroke-width="2.2" fill="#1a0800" fill-opacity="0.12"/>
+          <!-- Штриховка внутри щита -->
+          <path d="M22,28 L42,28 M22,33 L42,33 M22,38 L38,38" stroke-width="1" stroke-opacity="0.4" fill="none"/>
+          <!-- Центральный знак (стена) -->
+          <path d="M24,26 L24,40 L40,40 L40,26" stroke-width="2.5" fill="none"/>
+          <path d="M24,26 L32,20 L40,26" stroke-width="2.5" fill="#1a0800" fill-opacity="0.7"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32,16 L48,22 L48,36 C48,44 32,50 32,50 C32,50 16,44 16,36 L16,22 Z" stroke-width="2.5" fill="#1a0800" fill-opacity="0.12"/>
+          <path d="M24,26 L24,40 L40,40 L40,26" stroke-width="2.5" fill="none"/>
+          <path d="M24,26 L32,20 L40,26" stroke-width="2.5" fill="#1a0800" fill-opacity="0.7"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Щит</div>
+  </div>
+
+  <!-- Вариант 2: Стена (три вертикали) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Три пальца / стена -->
+          <rect x="18" y="18" width="8" height="28" rx="2" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <rect x="28" y="14" width="8" height="32" rx="2" stroke-width="2" fill="#1a0800" fill-opacity="0.85"/>
+          <rect x="38" y="18" width="8" height="28" rx="2" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <!-- Сетка снизу -->
+          <path d="M14,48 L50,48" stroke-width="2.5" fill="none"/>
+          <path d="M14,50 L50,50" stroke-width="1" fill="none"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="18" y="18" width="8" height="28" rx="2" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <rect x="28" y="14" width="8" height="32" rx="2" stroke-width="2" fill="#1a0800" fill-opacity="0.85"/>
+          <rect x="38" y="18" width="8" height="28" rx="2" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <path d="M14,48 L50,48" stroke-width="2.5" fill="none"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Три пальца / стена</div>
+  </div>
+
+  <!-- Вариант 3: Ладони у сетки (вид спереди) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- Сетка -->
+          <path d="M12,40 L52,40" stroke-width="2.5"/>
+          <path d="M12,42 L52,42" stroke-width="1"/>
+          <!-- Левая ладонь -->
+          <rect x="14" y="24" width="14" height="16" rx="3" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <!-- Правая ладонь -->
+          <rect x="36" y="24" width="14" height="16" rx="3" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <!-- Мяч отлетает -->
+          <circle cx="32" cy="20" r="6" stroke-width="2"/>
+          <path d="M26,20 C28,17 36,17 38,20" stroke-width="1.2"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M12,40 L52,40" stroke-width="2.5"/>
+          <rect x="14" y="24" width="14" height="16" rx="3" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <rect x="36" y="24" width="14" height="16" rx="3" stroke-width="2" fill="#1a0800" fill-opacity="0.75"/>
+          <circle cx="32" cy="20" r="6" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Ладони + мяч</div>
+  </div>
+
+</div>
+
+<!-- ─── ЛИБЕРО ────────────────────────────────────────────── -->
+<h3>Либеро — 3 варианта</h3>
+<div class="row">
+
+  <!-- Вариант 1: Волна (скользящий приём) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- Три волны (приём снизу) -->
+          <path d="M14,28 C18,22 22,22 26,28 C30,34 34,34 38,28 C42,22 46,22 50,28" stroke-width="3"/>
+          <path d="M14,36 C18,30 22,30 26,36 C30,42 34,42 38,36 C42,30 46,30 50,36" stroke-width="3"/>
+          <!-- Линия пола -->
+          <path d="M12,46 L52,46" stroke-width="2"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M14,28 C18,22 22,22 26,28 C30,34 34,34 38,28 C42,22 46,22 50,28" stroke-width="3.5"/>
+          <path d="M14,38 C18,32 22,32 26,38 C30,44 34,44 38,38 C42,32 46,32 50,38" stroke-width="3.5"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Волны (приём)</div>
+  </div>
+
+  <!-- Вариант 2: Звезда падения (вспышка при приёме) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- Звезда-вспышка -->
+          <path d="M32,14 L35,27 L48,24 L38,32 L48,40 L35,37 L32,50 L29,37 L16,40 L26,32 L16,24 L29,27 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.15"/>
+          <!-- Центральный круг (мяч) -->
+          <circle cx="32" cy="32" r="7" stroke-width="2" fill="#1a0800" fill-opacity="0.7"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M32,14 L35,27 L48,24 L38,32 L48,40 L35,37 L32,50 L29,37 L16,40 L26,32 L16,24 L29,27 Z" stroke-width="2" fill="#1a0800" fill-opacity="0.15"/>
+          <circle cx="32" cy="32" r="7" stroke-width="2" fill="#1a0800" fill-opacity="0.7"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Звезда-вспышка</div>
+  </div>
+
+  <!-- Вариант 3: Горизонтальная стрела (скользящий игрок) -->
+  <div class="item">
+    <div class="sizes">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <g filter="url(#ink)">
+          <circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.2"/>
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#1a0800" stroke-width="0.9" stroke-dasharray="2,3"/>
+        </g>
+        <g filter="url(#ink)" stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Стрела горизонтальная (скользит к мячу) -->
+          <path d="M14,32 L42,32" stroke-width="4" fill="none"/>
+          <path d="M36,22 L50,32 L36,42" stroke-width="3" fill="#1a0800" fill-opacity="0.85"/>
+          <!-- Хвост (шлейф) -->
+          <path d="M14,32 L10,28 M14,32 L10,36" stroke-width="2" fill="none"/>
+          <path d="M18,32 L14,26 M18,32 L14,38" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+          <!-- Мяч -->
+          <circle cx="50" cy="32" r="0" fill="none"/>
+        </g>
+      </svg>
+      <svg width="22" height="22" viewBox="0 0 64 64">
+        <g filter="url(#ink)"><circle cx="32" cy="32" r="27" fill="#f5edcf" stroke="#1a0800" stroke-width="2.5"/></g>
+        <g stroke="#1a0800" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12,32 L42,32" stroke-width="5" fill="none"/>
+          <path d="M36,22 L50,32 L36,42" stroke-width="3.5" fill="#1a0800" fill-opacity="0.85"/>
+        </g>
+      </svg>
+    </div>
+    <div class="opt">Горизонтальная стрела</div>
+  </div>
+
+</div>
+
+</body>
+</html>

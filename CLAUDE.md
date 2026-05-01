@@ -23,16 +23,17 @@ src/
     Standings.jsx   — турнирная таблица (с CalendarWidget внизу)
     Schedule.jsx    — расписание матчей, группировка по неделям и датам
     TeamPage.jsx    — страница команды: состав, предстоящие/сыгранные матчи
-    Admin.jsx       — панель администратора (авторизация через Supabase Auth)
+    Admin.jsx       — панель администратора (авторизация, управление, вкладка аналитики посещений с графиками)
   components/
     CalendarWidget.jsx  — виджет календаря под таблицей
     MikasaBall.jsx      — SVG-иконка мяча в шапке
   lib/
     supabase.js     — клиент Supabase (ключи из .env)
+    analytics.js    — сбор аналитики посещений (session/page view + metadata)
   test/
     logic.test.js   — unit-тесты бизнес-логики (Vitest)
     setup.js        — setup файл для тестов
-  App.jsx           — роутинг, шапка, переключение лига/таб, InstallBanner (PWA)
+  App.jsx           — роутинг, шапка, переключение лига/таб, InstallBanner (PWA); при следующем визите восстанавливается последняя выбранная лига (`localStorage` ключ `vsl_preferred_league`, значение — `leagues.name`)
 ```
 
 ## База данных Supabase — таблицы
@@ -81,10 +82,26 @@ src/
 | home_points | integer | Очки хозяев           |
 | away_points | integer | Очки гостей           |
 
+### site_visit_events
+| Колонка    | Тип        | Описание |
+|------------|------------|----------|
+| id         | uuid       | PK |
+| created_at | timestamptz| Когда зафиксировано событие |
+| event_type | text       | `session_start` или `page_view` |
+| visitor_id | text       | Постоянный ID посетителя (localStorage) |
+| session_id | text       | ID сессии (sessionStorage) |
+| page_key   | text       | Экран приложения (`standings`, `schedule`, `stats`, `team`, `player`, `awards`, `admin`) |
+| league     | text       | Активная лига в момент события |
+| season_id  | uuid       | Активный сезон |
+| referrer   | text       | Источник перехода |
+| url        | text       | Полный URL |
+| path       | text       | path+query+hash |
+| metadata   | jsonb      | Детальная телеметрия (UTM, устройство, экран, язык, connection, navigation timing, PWA mode, context) |
+
 ## Логика начисления очков (Standings)
 - Победа 3:0 или 3:1 → **3 очка** победителю, **0** проигравшему
-- Победа 3:2 → **3 очка** победителю, **1 очко** проигравшему
-- Зона плей-офф: топ-3 (синяя полоса)
+- Победа 3:2 → **2 очка** победителю, **1 очко** проигравшему
+- Зона плей-офф: топ-4 (синяя полоса)
 - Зона вылета: последние 2 (красная полоса)
 
 ## Правила капитана
@@ -103,11 +120,9 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_8ht117lVNAOJw04Jr_zbdA_nO50wrEo
 ### Процесс деплоя
 1. Внести изменения в код
 2. `git add <файлы> && git commit -m "описание"`
-3. Push через токен (токен хранить только временно в URL, после push убирать):
+3. Push на GitHub (SSH, `gh auth login` или PAT из настроек GitHub — **не хранить в репозитории**):
    ```
-   git remote set-url origin https://7141690-alex:<TOKEN>@github.com/7141690-alex/vsl-league.git
-   git push
-   git remote set-url origin https://github.com/7141690-alex/vsl-league.git
+   git push origin main
    ```
 4. Vercel подхватывает коммит автоматически (иногда нужно Redeploy вручную через Dashboard)
 
@@ -117,6 +132,9 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_8ht117lVNAOJw04Jr_zbdA_nO50wrEo
 ### Миграции БД
 Новые колонки добавляются вручную через Supabase SQL Editor:
 `https://supabase.com/dashboard/project/gvkdumzyhdguupdhcqeb/sql/new`
+
+SQL для аналитики посещений: `scripts/site-visit-events.sql`
+(создаёт таблицу `site_visit_events`, индексы и RLS-политики: insert для `anon`, select для `authenticated`).
 
 ## Зависимости — важное
 - `vite-plugin-pwa@1.2.0` не поддерживает Vite 8 официально → установлен через `--legacy-peer-deps`, в корне есть `.npmrc` с `legacy-peer-deps=true` (без него Vercel упадёт при установке зависимостей)

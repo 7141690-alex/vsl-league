@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ink Sketch Badges v3 — Realistic</title>
+  <style>
+    body { background: #0d0d1a; font-family: Arial; padding: 40px; }
+    h3 { color: rgba(255,255,255,0.4); font-size: 11px; font-weight:400; margin: 32px 0 14px; letter-spacing: 2px; text-transform: uppercase; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 24px; }
+    .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-end; }
+    .item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .sizes { display: flex; gap: 14px; align-items: center; }
+    .label { color: rgba(255,255,255,0.35); font-size: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0">
+  <defs>
+    <!-- Нежный шероховатый фильтр для крупного -->
+    <filter id="inkL" x="-6%" y="-6%" width="112%" height="112%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="5" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- Для мелкого -->
+    <filter id="inkS" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ═══════════════ MVP — КОРОНА ═══════════════════════════════════ -->
+<h3>MVP</h3>
+<div class="row"><div class="item">
+<div class="sizes">
+<svg width="80" height="80" viewBox="0 0 80 80">
+  <g filter="url(#inkL)">
+    <circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#18090090" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="31" fill="none" stroke="#18090060" stroke-width="0.7" stroke-dasharray="2.5,3.5"/>
+  </g>
+  <g filter="url(#inkL)">
+    <!-- Основание короны (плотная лента) -->
+    <path d="M18,58 C18,54 26,51 40,51 C54,51 62,54 62,58 L62,62 C62,65 54,67 40,67 C26,67 18,65 18,62 Z"
+      fill="#180900cc" stroke="#180900" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Орнамент на ленте -->
+    <path d="M22,59 L24,64 M28,58 L30,64 M34,58 L35,64 M40,57 L40,64 M46,58 L45,64 M52,58 L50,64 M58,59 L56,64"
+      stroke="#f4e8c1" stroke-width="1" fill="none" opacity="0.6"/>
+    <!-- Тело короны -->
+    <path d="M18,58 L18,40 L28,50 L36,28 L40,18 L44,28 L52,50 L62,40 L62,58 Z"
+      fill="#180900aa" stroke="#180900" stroke-width="2" stroke-linejoin="round"/>
+    <!-- Внутренняя штриховка тела -->
+    <clipPath id="crownClip">
+      <path d="M18,58 L18,40 L28,50 L36,28 L40,18 L44,28 L52,50 L62,40 L62,58 Z"/>
+    </clipPath>
+    <g clip-path="url(#crownClip)" opacity="0.35">
+      <path d="M20,56 L26,40 M24,56 L30,40 M28,56 L36,38 M32,56 L40,36 M36,56 L44,36 M40,56 L48,38 M44,56 L52,40 M48,56 L56,42 M52,56 L60,44"
+        stroke="#f4e8c1" stroke-width="1" fill="none"/>
+    </g>
+    <!-- Дуга внутри (корона вторая линия) -->
+    <path d="M22,56 C22,50 28,47 40,47 C52,47 58,50 58,56" stroke="#f4e8c1" stroke-width="1.2" fill="none" opacity="0.5"/>
+    <!-- Главный камень (центр) -->
+    <circle cx="40" cy="18" r="4.5" fill="#180900"/>
+    <circle cx="40" cy="18" r="2.5" fill="#f4e8c1" opacity="0.8"/>
+    <circle cx="40" cy="18" r="1" fill="#180900"/>
+    <!-- Блики на главном камне -->
+    <path d="M38,16 L39,17 M41,17 L42,16" stroke="#f4e8c1" stroke-width="0.8" fill="none" opacity="0.9"/>
+    <!-- Боковые камни -->
+    <circle cx="28" cy="50" r="3.5" fill="#180900"/>
+    <circle cx="28" cy="50" r="1.8" fill="#f4e8c1" opacity="0.7"/>
+    <circle cx="52" cy="50" r="3.5" fill="#180900"/>
+    <circle cx="52" cy="50" r="1.8" fill="#f4e8c1" opacity="0.7"/>
+    <!-- Маленькие камни на пиках -->
+    <circle cx="18" cy="40" r="2.5" fill="#180900"/>
+    <circle cx="18" cy="40" r="1.2" fill="#f4e8c1" opacity="0.6"/>
+    <circle cx="62" cy="40" r="2.5" fill="#180900"/>
+    <circle cx="62" cy="40" r="1.2" fill="#f4e8c1" opacity="0.6"/>
+    <!-- Точки орнамента на ленте (горностай) -->
+    <circle cx="25" cy="61" r="1.5" fill="#f4e8c1" opacity="0.8"/>
+    <circle cx="32" cy="60" r="1.5" fill="#f4e8c1" opacity="0.8"/>
+    <circle cx="40" cy="60" r="1.5" fill="#f4e8c1" opacity="0.8"/>
+    <circle cx="48" cy="60" r="1.5" fill="#f4e8c1" opacity="0.8"/>
+    <circle cx="55" cy="61" r="1.5" fill="#f4e8c1" opacity="0.8"/>
+    <!-- Соединительные завитки -->
+    <path d="M28,44 C30,42 32,42 34,44 M46,44 C48,42 50,42 52,44"
+      stroke="#f4e8c1" stroke-width="1" fill="none" opacity="0.45"/>
+  </g>
+</svg>
+<!-- Маленький -->
+<svg width="26" height="26" viewBox="0 0 80 80">
+  <g filter="url(#inkS)"><circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#180900" stroke-width="3"/></g>
+  <g filter="url(#inkS)">
+    <path d="M18,58 C18,54 26,51 40,51 C54,51 62,54 62,58 L62,62 C62,65 54,67 40,67 C26,67 18,65 18,62 Z" fill="#180900cc" stroke="#180900" stroke-width="2"/>
+    <path d="M18,58 L18,40 L28,50 L36,28 L40,18 L44,28 L52,50 L62,40 L62,58 Z" fill="#180900aa" stroke="#180900" stroke-width="2.5"/>
+    <circle cx="40" cy="18" r="4.5" fill="#180900"/>
+    <circle cx="40" cy="18" r="2" fill="#f4e8c1"/>
+    <circle cx="28" cy="50" r="3" fill="#180900"/>
+    <circle cx="52" cy="50" r="3" fill="#180900"/>
+  </g>
+</svg>
+</div><div class="label">MVP</div></div></div>
+
+
+<!-- ═══════════════ СВЯЗУЮЩИЙ — РУКИ ═══════════════════════════════ -->
+<h3>Связующий</h3>
+<div class="row"><div class="item">
+<div class="sizes">
+<svg width="80" height="80" viewBox="0 0 80 80">
+  <g filter="url(#inkL)">
+    <circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#18090090" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="31" fill="none" stroke="#18090060" stroke-width="0.7" stroke-dasharray="2.5,3.5"/>
+  </g>
+  <g filter="url(#inkL)" fill="none" stroke="#180900" stroke-linecap="round" stroke-linejoin="round">
+    <!-- МЯЧ над руками -->
+    <circle cx="40" cy="22" r="9" stroke-width="2"/>
+    <!-- Панели мяча -->
+    <path d="M31,22 C34,16 46,16 49,22" stroke-width="1.2"/>
+    <path d="M31,22 C34,28 46,28 49,22" stroke-width="1.2"/>
+    <path d="M40,13 L40,31" stroke-width="1.2"/>
+    <!-- Тень на мяче (штриховка) -->
+    <path d="M43,14 L47,16 M46,17 L49,20 M48,22 L49,26" stroke-width="0.7" opacity="0.4"/>
+
+    <!-- ЛЕВАЯ РУКА -->
+    <!-- Запястье/предплечье -->
+    <path d="M20,72 C19,66 19,60 21,54 C22,50 24,47 26,45" stroke-width="5" stroke-linecap="round"/>
+    <!-- Ладонь -->
+    <path d="M26,45 C24,42 23,40 24,37 C25,35 27,35 28,36" stroke-width="2.5"/>
+    <!-- Мизинец -->
+    <path d="M24,42 C22,39 21,36 22,33 C22,31 24,30 25,31 C26,32 27,34 27,37" stroke-width="2"/>
+    <!-- Безымянный -->
+    <path d="M26,42 C25,38 24,34 25,31 C26,28 28,27 29,28 C31,29 31,32 31,35" stroke-width="2.2"/>
+    <!-- Средний (длиннее) -->
+    <path d="M28,41 C27,37 27,32 28,28 C29,25 31,23 33,24 C35,25 35,28 35,31" stroke-width="2.5"/>
+    <!-- Указательный -->
+    <path d="M30,41 C30,37 30,32 31,28 C32,25 34,24 36,25 C37,26 37,29 37,32" stroke-width="2.2"/>
+    <!-- Большой (сбоку) -->
+    <path d="M28,46 C25,46 23,44 23,41 C23,38 25,37 27,38" stroke-width="2"/>
+    <!-- Штриховка ладони -->
+    <path d="M26,44 L28,40 M27,46 L30,42 M29,46 L32,43" stroke-width="0.8" opacity="0.4"/>
+
+    <!-- ПРАВАЯ РУКА (зеркало) -->
+    <path d="M60,72 C61,66 61,60 59,54 C58,50 56,47 54,45" stroke-width="5" stroke-linecap="round"/>
+    <path d="M54,45 C56,42 57,40 56,37 C55,35 53,35 52,36" stroke-width="2.5"/>
+    <circle cx="0" cy="0" r="0"/><!-- spacer -->
+    <!-- Мизинец -->
+    <path d="M56,42 C58,39 59,36 58,33 C58,31 56,30 55,31 C54,32 53,34 53,37" stroke-width="2"/>
+    <!-- Безымянный -->
+    <path d="M54,42 C55,38 56,34 55,31 C54,28 52,27 51,28 C49,29 49,32 49,35" stroke-width="2.2"/>
+    <!-- Средний -->
+    <path d="M52,41 C53,37 53,32 52,28 C51,25 49,23 47,24 C45,25 45,28 45,31" stroke-width="2.5"/>
+    <!-- Указательный -->
+    <path d="M50,41 C50,37 50,32 49,28 C48,25 46,24 44,25 C43,26 43,29 43,32" stroke-width="2.2"/>
+    <!-- Большой -->
+    <path d="M52,46 C55,46 57,44 57,41 C57,38 55,37 53,38" stroke-width="2"/>
+    <!-- Штриховка ладони -->
+    <path d="M54,44 L52,40 M53,46 L50,42 M51,46 L48,43" stroke-width="0.8" opacity="0.4"/>
+  </g>
+</svg>
+<svg width="26" height="26" viewBox="0 0 80 80">
+  <g filter="url(#inkS)"><circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#180900" stroke-width="3"/></g>
+  <g filter="url(#inkS)" fill="none" stroke="#180900" stroke-linecap="round">
+    <circle cx="40" cy="22" r="9" stroke-width="2.5"/>
+    <path d="M31,22 C34,16 46,16 49,22 M31,22 C34,28 46,28 49,22" stroke-width="1.5"/>
+    <path d="M20,72 C19,60 21,54 26,45" stroke-width="5"/>
+    <path d="M26,45 L24,42 L25,31 L29,28 L33,24 L37,32 M28,46 C25,46 23,41 27,38" stroke-width="2.2"/>
+    <path d="M60,72 C61,60 59,54 54,45" stroke-width="5"/>
+    <path d="M54,45 L56,42 L55,31 L51,28 L47,24 L43,32 M52,46 C55,46 57,41 53,38" stroke-width="2.2"/>
+  </g>
+</svg>
+</div><div class="label">Связующий</div></div></div>
+
+
+<!-- ═══════════════ ПОДАЮЩИЙ — ПРЫЖОК ══════════════════════════════ -->
+<h3>Подающий</h3>
+<div class="row"><div class="item">
+<div class="sizes">
+<svg width="80" height="80" viewBox="0 0 80 80">
+  <g filter="url(#inkL)">
+    <circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#18090090" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="31" fill="none" stroke="#18090060" stroke-width="0.7" stroke-dasharray="2.5,3.5"/>
+  </g>
+  <g filter="url(#inkL)" stroke="#180900" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Мяч (вверху, отброшен) -->
+    <circle cx="56" cy="14" r="7" fill="none" stroke-width="1.8"/>
+    <path d="M49,14 C51,10 61,10 63,14" stroke-width="1.1" fill="none"/>
+    <path d="M49,14 C51,18 61,18 63,14" stroke-width="1.1" fill="none"/>
+    <path d="M56,7 L56,21" stroke-width="1.1" fill="none"/>
+
+    <!-- СИЛУЭТ ИГРОКА (вид сбоку, прыжок-подача) -->
+    <!-- Голова -->
+    <circle cx="38" cy="18" r="5.5" fill="#180900" fill-opacity="0.85" stroke-width="1.5"/>
+    <!-- Волосы (штрихи) -->
+    <path d="M33,16 C34,12 38,11 42,12" stroke-width="1.5" fill="none"/>
+    <!-- Шея -->
+    <path d="M38,23 L37,27" stroke-width="3.5" fill="none"/>
+    <!-- Тело (выгнуто назад — характерная поза прыжка-подачи) -->
+    <path d="M37,27 C35,32 34,36 35,40 C36,44 38,46 40,48" stroke-width="5" fill="none"/>
+    <!-- Правое плечо и рука ВВЕРХ (бьёт) -->
+    <path d="M37,29 C40,26 44,22 48,16" stroke-width="4" fill="none"/>
+    <!-- Кулак / ладонь вверху -->
+    <path d="M48,16 C50,14 52,13 53,15 C54,17 53,19 51,19 L48,18" stroke-width="2" fill="#180900" fill-opacity="0.8"/>
+    <!-- Левое плечо и рука вниз-назад (для баланса) -->
+    <path d="M36,30 C32,32 29,34 26,38" stroke-width="3.5" fill="none"/>
+    <!-- Кисть левой руки -->
+    <path d="M26,38 C24,40 22,40 22,38 C22,36 24,35 26,37" stroke-width="1.8" fill="none"/>
+    <!-- Бедро / таз -->
+    <path d="M40,48 C41,50 42,52 42,54" stroke-width="4.5" fill="none"/>
+    <!-- Правая нога (согнута назад) -->
+    <path d="M42,54 C44,57 46,60 46,64" stroke-width="4" fill="none"/>
+    <path d="M46,64 C46,66 45,67 43,67 C41,67 40,66 40,64" stroke-width="2" fill="none"/>
+    <!-- Левая нога (вперёд, немного согнута) -->
+    <path d="M40,50 C37,54 34,58 32,62" stroke-width="4" fill="none"/>
+    <path d="M32,62 C31,64 32,66 34,66 C36,66 37,65 38,63" stroke-width="2" fill="none"/>
+
+    <!-- Штриховка тела (мышцы) -->
+    <path d="M36,30 L38,34 M35,34 L37,38 M36,38 L38,42 M37,43 L39,47"
+      stroke-width="0.9" fill="none" opacity="0.35"/>
+    <!-- Линии движения руки -->
+    <path d="M44,22 L42,19 M46,25 L44,22" stroke-width="1.2" fill="none" stroke-dasharray="1,2" opacity="0.6"/>
+    <!-- Линии скорости (ветер) -->
+    <path d="M14,30 L20,30 M13,36 L18,36 M14,42 L19,42" stroke-width="1.2" fill="none" opacity="0.35"/>
+  </g>
+</svg>
+<svg width="26" height="26" viewBox="0 0 80 80">
+  <g filter="url(#inkS)"><circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#180900" stroke-width="3"/></g>
+  <g filter="url(#inkS)" stroke="#180900" stroke-linecap="round">
+    <circle cx="56" cy="14" r="7" fill="none" stroke-width="2"/>
+    <circle cx="38" cy="18" r="5.5" fill="#180900" fill-opacity="0.85" stroke-width="2"/>
+    <path d="M38,23 L37,27 C35,32 34,36 35,40 C36,44 38,46 40,48" stroke-width="5" fill="none"/>
+    <path d="M37,29 C40,26 44,22 48,16" stroke-width="4" fill="none"/>
+    <path d="M48,16 C52,13 54,17 51,19 L48,18" stroke-width="2" fill="#180900" fill-opacity="0.8"/>
+    <path d="M36,30 C32,32 29,34 26,38" stroke-width="3.5" fill="none"/>
+    <path d="M42,54 C44,57 46,60 46,64 C46,67 41,67 40,64" stroke-width="4" fill="none"/>
+    <path d="M40,50 C37,54 34,58 32,62 C31,65 36,67 38,63" stroke-width="4" fill="none"/>
+  </g>
+</svg>
+</div><div class="label">Подающий</div></div></div>
+
+
+<!-- ═══════════════ АТАКУЮЩИЙ — НАПАДЕНИЕ ══════════════════════════ -->
+<h3>Атакующий</h3>
+<div class="row"><div class="item">
+<div class="sizes">
+<svg width="80" height="80" viewBox="0 0 80 80">
+  <g filter="url(#inkL)">
+    <circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#18090090" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="31" fill="none" stroke="#18090060" stroke-width="0.7" stroke-dasharray="2.5,3.5"/>
+  </g>
+  <g filter="url(#inkL)" stroke="#180900" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Голова -->
+    <circle cx="32" cy="15" r="5.5" fill="#180900" fill-opacity="0.85" stroke-width="1.5"/>
+    <!-- Шея -->
+    <path d="M32,20 L32,25" stroke-width="3.5" fill="none"/>
+    <!-- Тело -->
+    <path d="M32,25 C31,30 30,34 30,38" stroke-width="5" fill="none"/>
+
+    <!-- БЬЮЩАЯ РУКА (главный элемент — рука вверх-вперёд) -->
+    <!-- Плечо -->
+    <path d="M33,26 C37,22 42,18 48,15" stroke-width="5" fill="none"/>
+    <!-- Предплечье -->
+    <path d="M48,15 C52,18 55,22 56,28" stroke-width="4.5" fill="none"/>
+    <!-- Кулак (детальный) -->
+    <path d="M56,28 C58,30 59,33 58,36 C57,38 55,39 53,38 C50,37 49,34 50,31 C51,28 54,27 56,28 Z"
+      fill="#180900" fill-opacity="0.85" stroke-width="1.8"/>
+    <!-- Большой палец -->
+    <path d="M53,38 C51,40 49,40 48,38 C47,36 48,34 50,34" stroke-width="1.6" fill="none"/>
+    <!-- Детали кулака — суставы -->
+    <path d="M51,31 L54,30 M51,33 L55,32 M51,35 L55,35" stroke-width="0.9" fill="none" opacity="0.5"/>
+
+    <!-- Левая рука (поднята для прыжка/баланса) -->
+    <path d="M31,27 C26,24 22,22 19,24" stroke-width="3.5" fill="none"/>
+    <path d="M19,24 C17,25 16,27 17,29 C18,31 20,31 22,30" stroke-width="1.8" fill="none"/>
+
+    <!-- Нога левая (в воздухе, согнута) -->
+    <path d="M30,38 C28,42 26,46 26,50" stroke-width="4.5" fill="none"/>
+    <path d="M26,50 C25,54 27,56 29,55 C31,54 32,52 32,49" stroke-width="3.5" fill="none"/>
+    <!-- Нога правая -->
+    <path d="M30,39 C32,44 33,48 32,53" stroke-width="4" fill="none"/>
+    <path d="M32,53 C32,57 30,59 28,58 C26,57 26,55 28,53" stroke-width="2.5" fill="none"/>
+
+    <!-- МЯЧ (в точке контакта) -->
+    <circle cx="60" cy="40" r="8" fill="#f4e8c1" fill-opacity="0.9" stroke-width="2"/>
+    <path d="M52,40 C54,35 66,35 68,40" stroke-width="1.3" fill="none"/>
+    <path d="M52,40 C54,45 66,45 68,40" stroke-width="1.3" fill="none"/>
+    <path d="M60,32 L60,48" stroke-width="1.3" fill="none"/>
+
+    <!-- Линии удара (радиальные) -->
+    <path d="M64,34 L68,30 M68,40 L73,40 M65,46 L69,50 M60,48 L60,53" stroke-width="1.5" fill="none" stroke-dasharray="2,2" opacity="0.7"/>
+
+    <!-- Штриховка тела -->
+    <path d="M31,27 L33,32 M30,31 L32,35 M30,35 L32,39" stroke-width="0.9" fill="none" opacity="0.35"/>
+    <!-- Штриховка плеча -->
+    <path d="M35,24 L37,20 M39,22 L40,18 M43,20 L43,16" stroke-width="0.9" fill="none" opacity="0.35"/>
+  </g>
+</svg>
+<svg width="26" height="26" viewBox="0 0 80 80">
+  <g filter="url(#inkS)"><circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#180900" stroke-width="3"/></g>
+  <g filter="url(#inkS)" stroke="#180900" stroke-linecap="round">
+    <circle cx="32" cy="15" r="5.5" fill="#180900" fill-opacity="0.85" stroke-width="2"/>
+    <path d="M32,20 L32,25 C31,30 30,34 30,38" stroke-width="5" fill="none"/>
+    <path d="M33,26 C37,22 42,18 48,15 C52,18 55,22 56,28" stroke-width="5" fill="none"/>
+    <path d="M56,28 C59,33 57,39 53,38 C49,37 49,31 56,28 Z" fill="#180900" fill-opacity="0.85" stroke-width="2"/>
+    <path d="M31,27 C26,24 19,24 17,29" stroke-width="3.5" fill="none"/>
+    <path d="M30,38 C28,42 26,46 26,50 C25,54 31,56 32,49" stroke-width="4.5" fill="none"/>
+    <path d="M30,39 C32,44 33,48 32,53 C32,58 26,58 28,53" stroke-width="4" fill="none"/>
+    <circle cx="60" cy="40" r="8" fill="#f4e8c1" stroke-width="2.5"/>
+    <path d="M64,34 L68,30 M68,40 L73,40 M65,46 L69,50" stroke-width="1.8" fill="none" stroke-dasharray="2,2"/>
+  </g>
+</svg>
+</div><div class="label">Атакующий</div></div></div>
+
+
+<!-- ═══════════════ БЛОКИРУЮЩИЙ — БЛОК ═════════════════════════════ -->
+<h3>Блокирующий</h3>
+<div class="row"><div class="item">
+<div class="sizes">
+<svg width="80" height="80" viewBox="0 0 80 80">
+  <g filter="url(#inkL)">
+    <circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#18090090" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="31" fill="none" stroke="#18090060" stroke-width="0.7" stroke-dasharray="2.5,3.5"/>
+  </g>
+  <g filter="url(#inkL)" stroke="#180900" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- СЕТКА (снизу) -->
+    <path d="M10,55 L70,55" stroke-width="3"/>
+    <path d="M10,58 L70,58" stroke-width="1.2"/>
+    <!-- Ячейки сетки (детально) -->
+    <path d="M16,55 L16,60 M22,55 L22,60 M28,55 L28,60 M34,55 L34,60 M40,55 L40,60 M46,55 L46,60 M52,55 L52,60 M58,55 L58,60 M64,55 L64,60"
+      stroke-width="0.9" opacity="0.5"/>
+    <path d="M10,56.5 L70,56.5" stroke-width="0.7" opacity="0.3"/>
+
+    <!-- ЛЕВАЯ РУКА -->
+    <!-- Предплечье -->
+    <path d="M22,75 C21,68 20,62 21,56" stroke-width="6" stroke-linecap="round"/>
+    <!-- Ладонь -->
+    <path d="M21,56 C20,52 20,48 21,46 C22,44 24,43 26,44" stroke-width="3.5"/>
+    <!-- Мизинец -->
+    <path d="M20,50 C18,46 18,42 19,38 C20,35 22,34 24,35 C26,36 26,39 26,43" stroke-width="2.2"/>
+    <!-- Безымянный -->
+    <path d="M22,50 C21,45 21,41 22,37 C23,34 25,32 27,33 C29,34 29,37 29,41" stroke-width="2.3"/>
+    <!-- Средний (самый длинный) -->
+    <path d="M24,49 C23,44 23,39 24,35 C25,31 27,29 29,30 C31,31 32,34 31,39" stroke-width="2.5"/>
+    <!-- Указательный -->
+    <path d="M26,49 C26,44 26,40 28,36 C29,33 31,31 33,32 C35,33 35,36 34,41" stroke-width="2.3"/>
+    <!-- Большой (сбоку) -->
+    <path d="M24,53 C21,52 19,49 20,46 C21,44 23,44 24,45" stroke-width="2"/>
+    <!-- Штриховка ладони -->
+    <path d="M22,52 L25,47 M24,53 L27,48 M26,53 L29,49" stroke-width="0.9" opacity="0.4"/>
+
+    <!-- ПРАВАЯ РУКА -->
+    <path d="M58,75 C59,68 60,62 59,56" stroke-width="6" stroke-linecap="round"/>
+    <path d="M59,56 C60,52 60,48 59,46 C58,44 56,43 54,44" stroke-width="3.5"/>
+    <!-- Мизинец -->
+    <path d="M60,50 C62,46 62,42 61,38 C60,35 58,34 56,35 C54,36 54,39 54,43" stroke-width="2.2"/>
+    <!-- Безымянный -->
+    <path d="M58,50 C59,45 59,41 58,37 C57,34 55,32 53,33 C51,34 51,37 51,41" stroke-width="2.3"/>
+    <!-- Средний -->
+    <path d="M56,49 C57,44 57,39 56,35 C55,31 53,29 51,30 C49,31 48,34 49,39" stroke-width="2.5"/>
+    <!-- Указательный -->
+    <path d="M54,49 C54,44 54,40 52,36 C51,33 49,31 47,32 C45,33 45,36 46,41" stroke-width="2.3"/>
+    <!-- Большой -->
+    <path d="M56,53 C59,52 61,49 60,46 C59,44 57,44 56,45" stroke-width="2"/>
+    <!-- Штриховка -->
+    <path d="M58,52 L55,47 M56,53 L53,48 M54,53 L51,49" stroke-width="0.9" opacity="0.4"/>
+
+    <!-- МЯЧ (отлетает вверх) -->
+    <circle cx="40" cy="26" r="9" stroke-width="2"/>
+    <path d="M31,26 C34,20 46,20 49,26" stroke-width="1.3"/>
+    <path d="M31,26 C34,32 46,32 49,26" stroke-width="1.3"/>
+    <path d="M40,17 L40,35" stroke-width="1.3"/>
+    <!-- Штриховка тени мяча -->
+    <path d="M43,18 L47,21 M46,22 L49,25 M47,28 L49,31" stroke-width="0.8" opacity="0.4"/>
+    <!-- Линии движения мяча вверх -->
+    <path d="M36,16 L34,12 M40,15 L40,11 M44,16 L46,12" stroke-width="1.3" stroke-dasharray="1,2" opacity="0.6"/>
+  </g>
+</svg>
+<svg width="26" height="26" viewBox="0 0 80 80">
+  <g filter="url(#inkS)"><circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#180900" stroke-width="3"/></g>
+  <g filter="url(#inkS)" stroke="#180900" stroke-linecap="round" fill="none">
+    <path d="M10,55 L70,55" stroke-width="3"/>
+    <path d="M10,58 L70,58" stroke-width="1.5"/>
+    <path d="M22,75 C21,62 21,56" stroke-width="6"/>
+    <path d="M21,56 C20,48 21,43 26,44" stroke-width="3.5"/>
+    <path d="M20,50 C18,42 19,35 24,35 C26,36 26,43" stroke-width="2.2"/>
+    <path d="M22,49 C21,41 22,35 27,33 C29,34 29,41" stroke-width="2.5"/>
+    <path d="M24,49 C23,39 24,33 29,30 C32,31 31,39" stroke-width="2.5"/>
+    <path d="M26,49 C26,40 28,33 33,32 C35,33 34,41" stroke-width="2.5"/>
+    <path d="M58,75 C59,62 59,56" stroke-width="6"/>
+    <path d="M59,56 C60,48 59,43 54,44" stroke-width="3.5"/>
+    <path d="M60,50 C62,42 61,35 56,35 C54,36 54,43" stroke-width="2.2"/>
+    <path d="M58,49 C59,41 58,35 53,33 C51,34 51,41" stroke-width="2.5"/>
+    <path d="M56,49 C57,39 56,33 51,30 C48,31 49,39" stroke-width="2.5"/>
+    <path d="M54,49 C54,40 52,33 47,32 C45,33 46,41" stroke-width="2.5"/>
+    <circle cx="40" cy="26" r="9" stroke-width="2.5"/>
+    <path d="M31,26 C34,20 46,20 49,26 M31,26 C34,32 46,32 49,26" stroke-width="1.5"/>
+  </g>
+</svg>
+</div><div class="label">Блокирующий</div></div></div>
+
+
+<!-- ═══════════════ ЛИБЕРО — ПРИЁМ ══════════════════════════════════ -->
+<h3>Либеро</h3>
+<div class="row"><div class="item">
+<div class="sizes">
+<svg width="80" height="80" viewBox="0 0 80 80">
+  <g filter="url(#inkL)">
+    <circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#18090090" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="31" fill="none" stroke="#18090060" stroke-width="0.7" stroke-dasharray="2.5,3.5"/>
+  </g>
+  <g filter="url(#inkL)" stroke="#180900" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- ПОЛ (линия корта) -->
+    <path d="M8,62 L72,62" stroke-width="2"/>
+
+    <!-- МЯЧ (низко, летит к игроку) -->
+    <circle cx="62" cy="44" r="7" stroke-width="2"/>
+    <path d="M55,44 C57,40 67,40 69,44" stroke-width="1.2"/>
+    <path d="M55,44 C57,48 67,48 69,44" stroke-width="1.2"/>
+    <path d="M62,37 L62,51" stroke-width="1.2"/>
+    <!-- Траектория мяча (летит снизу) -->
+    <path d="M44,60 C50,56 56,50 58,45" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.6"/>
+
+    <!-- ГОЛОВА -->
+    <circle cx="14" cy="38" r="5.5" fill="#180900" fill-opacity="0.85" stroke-width="1.5"/>
+    <!-- Волосы -->
+    <path d="M10,36 C11,32 14,31 18,32" stroke-width="1.5"/>
+    <!-- Шея -->
+    <path d="M14,43 L15,47" stroke-width="3.5"/>
+    <!-- ТЕЛО (горизонтально) -->
+    <path d="M15,47 C20,48 28,49 36,50 C42,51 48,51 54,50" stroke-width="5.5"/>
+
+    <!-- ВЫТЯНУТАЯ РУКА (для приёма, вперёд к мячу) -->
+    <path d="M15,48 C12,52 10,56 10,60" stroke-width="4.5"/>
+    <!-- Предплечье доигровки (ГЛАВНЫЙ элемент — платформа) -->
+    <path d="M15,50 C18,54 22,58 28,60" stroke-width="4.5"/>
+    <!-- Соединение рук (платформа либеро) -->
+    <path d="M10,60 C16,63 22,63 28,60" stroke-width="3.5"/>
+    <!-- Кисти (скрещены) -->
+    <path d="M10,60 C9,62 10,64 12,64 C14,64 15,62 14,60" stroke-width="1.8"/>
+    <path d="M28,60 C29,62 28,64 26,64 C24,64 23,62 24,60" stroke-width="1.8"/>
+    <!-- Штриховка платформы -->
+    <path d="M12,61 L14,57 M15,62 L18,58 M18,62 L21,59 M22,62 L25,59" stroke-width="0.9" opacity="0.4"/>
+
+    <!-- Правая рука (назад, для баланса) -->
+    <path d="M36,50 C38,46 40,44 44,44" stroke-width="3.5"/>
+    <path d="M44,44 C46,44 48,45 48,47 C48,49 46,50 44,49" stroke-width="1.8"/>
+
+    <!-- Таз / бедро -->
+    <path d="M54,50 C56,52 58,54 58,57" stroke-width="5"/>
+    <!-- Правая нога (вверх, для баланса падения) -->
+    <path d="M58,57 C60,54 62,52 64,52 C66,52 67,54 66,56" stroke-width="4"/>
+    <path d="M64,52 C65,50 65,49 64,48 C63,47 62,48 62,50" stroke-width="2.5"/>
+    <!-- Левая нога (на полу / полусогнута) -->
+    <path d="M56,51 C58,56 60,60 62,62" stroke-width="4"/>
+    <path d="M62,62 C63,64 62,66 60,66 C58,66 57,64 58,62" stroke-width="2.5"/>
+
+    <!-- Штриховка тела -->
+    <path d="M20,49 L22,46 M26,50 L28,47 M32,50 L34,48 M38,50 L40,47 M44,50 L45,47 M49,50 L50,47"
+      stroke-width="0.9" opacity="0.35"/>
+    <!-- Пыль / динамика (вокруг руки) -->
+    <path d="M8,58 L6,55 M8,62 L5,62 M9,66 L7,68" stroke-width="1.2" stroke-dasharray="1,2" opacity="0.5"/>
+  </g>
+</svg>
+<svg width="26" height="26" viewBox="0 0 80 80">
+  <g filter="url(#inkS)"><circle cx="40" cy="40" r="36" fill="#f4e8c1" stroke="#180900" stroke-width="3"/></g>
+  <g filter="url(#inkS)" stroke="#180900" stroke-linecap="round" fill="none">
+    <path d="M8,62 L72,62" stroke-width="2"/>
+    <circle cx="62" cy="44" r="7" stroke-width="2.5"/>
+    <path d="M55,44 C57,40 67,40 69,44 M55,44 C57,48 67,48 69,44" stroke-width="1.5"/>
+    <circle cx="14" cy="38" r="5.5" fill="#180900" fill-opacity="0.85" stroke-width="2"/>
+    <path d="M14,43 L15,47 C20,48 28,49 36,50 C42,51 54,50" stroke-width="5.5"/>
+    <path d="M15,48 C12,52 10,56 10,60" stroke-width="4.5"/>
+    <path d="M15,50 C18,54 22,58 28,60" stroke-width="4.5"/>
+    <path d="M10,60 C16,63 22,63 28,60" stroke-width="4"/>
+    <path d="M36,50 C38,46 40,44 44,44 C46,44 48,47 44,49" stroke-width="3.5"/>
+    <path d="M54,50 C56,52 58,54 58,57 C60,54 64,52 66,56" stroke-width="4.5"/>
+    <path d="M56,51 C58,56 60,60 62,62 C63,65 58,67 58,62" stroke-width="4"/>
+  </g>
+</svg>
+</div><div class="label">Либеро</div></div></div>
+
+</body>
+</html>

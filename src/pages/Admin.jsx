@@ -490,10 +490,7 @@ function AnalyticsAdmin() {
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
           По уникальным посетителям за выбранный период: {stats.uniqueVisitorsTotal}
         </div>
-        <PercentageList rows={stats.deviceSplit} emptyText="Недостаточно данных по устройствам" />
-        <div style={{ marginTop: 12 }}>
-          <BarChart rows={stats.deviceSplit} emptyText="" />
-        </div>
+        <BarChart rows={stats.deviceSplit} emptyText="Недостаточно данных по устройствам" />
       </div>
     </div>
   )
@@ -539,34 +536,6 @@ function SimpleList({ rows, emptyText }) {
   )
 }
 
-function PercentageList({ rows, emptyText }) {
-  if (!rows.length) return <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div>
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {rows.map(row => (
-        <div
-          key={row.key}
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 8,
-            padding: '7px 10px',
-            gap: 10,
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#fff' }}>{row.key}</span>
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#8b97ff' }}>
-            {row.value} ({row.percent}%)
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function LineChart({ rows, emptyText, leftLabel, rightLabel }) {
   if (!rows.length) return <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div>
   const width = 760
@@ -586,15 +555,29 @@ function LineChart({ rows, emptyText, leftLabel, rightLabel }) {
     const label = Math.round(maxValue * step)
     return { yy, label }
   })
+  const xTicks = [0, 0.25, 0.5, 0.75, 1].map(step => {
+    const idx = Math.round((rows.length - 1) * step)
+    return {
+      x: x(idx),
+      label: rows[idx]?.dateLabel || '',
+    }
+  })
 
   return (
     <div style={{ width: '100%', overflowX: 'auto' }}>
       <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', minWidth: 420, height: 220 }}>
         <rect x="0" y="0" width={width} height={height} rx="10" fill="rgba(255,255,255,0.01)" />
+        <text x={10} y={14} fill="rgba(255,255,255,0.45)" fontSize="10">ед.: пользователи / просмотры</text>
         {grid.map(g => (
           <g key={g.yy}>
             <line x1={padX} y1={g.yy} x2={width - padX} y2={g.yy} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
             <text x={8} y={g.yy + 4} fill="rgba(255,255,255,0.4)" fontSize="10">{g.label}</text>
+          </g>
+        ))}
+        {xTicks.map(t => (
+          <g key={`${t.x}-${t.label}`}>
+            <line x1={t.x} y1={height - padY} x2={t.x} y2={height - padY + 4} stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
+            <text x={t.x} y={height - 4} fill="rgba(255,255,255,0.45)" fontSize="10" textAnchor="middle">{t.label}</text>
           </g>
         ))}
         <path d={toPath('pageViews')} fill="none" stroke="#8b97ff" strokeWidth="2.5" />
@@ -616,14 +599,25 @@ function BarChart({ rows, emptyText }) {
   if (!rows.length) return emptyText ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{emptyText}</div> : null
   const max = Math.max(1, ...rows.map(r => r.percent))
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {rows.map(row => (
-        <div key={row.key} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 56px', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{row.key}</span>
-          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden', height: 8 }}>
+        <div key={row.key}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: 10,
+            marginBottom: 6,
+            flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', minWidth: 0 }}>{row.key}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#8b97ff', flexShrink: 0 }}>
+              {row.percent}% · {row.value} посетителей
+            </span>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden', height: 10 }}>
             <div style={{ width: `${(row.percent / max) * 100}%`, background: 'linear-gradient(90deg, #6366f1, #8b97ff)', height: '100%' }} />
           </div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'right' }}>{row.percent}%</span>
         </div>
       ))}
     </div>

@@ -58,6 +58,27 @@ const DEFAULT_LEAGUES = [
   { name: 'female', display_name: 'Женская', gender: 'female' },
 ]
 
+const PREFERRED_LEAGUE_KEY = 'vsl_preferred_league'
+
+function readPreferredLeagueName() {
+  try {
+    if (typeof window === 'undefined') return null
+    const v = window.localStorage.getItem(PREFERRED_LEAGUE_KEY)
+    const t = typeof v === 'string' ? v.trim() : ''
+    return t || null
+  } catch {
+    return null
+  }
+}
+
+function writePreferredLeagueName(name) {
+  try {
+    window.localStorage.setItem(PREFERRED_LEAGUE_KEY, name)
+  } catch {
+    /* private mode / quota */
+  }
+}
+
 // Универсальная кнопка-dropdown
 function DropdownButton({ label, open, btnRef, onClick, style }) {
   return (
@@ -125,7 +146,7 @@ function InstallBanner() {
 
 export default function App() {
   const [leagues, setLeagues] = useState(DEFAULT_LEAGUES)
-  const [league, setLeague] = useState('male')
+  const [league, setLeague] = useState(() => readPreferredLeagueName() || 'male')
   const [seasons, setSeasons] = useState([])
   const [seasonId, setSeasonId] = useState(null) // null = текущий (is_current)
 
@@ -157,6 +178,17 @@ export default function App() {
         }
       })
   }, [])
+
+  useEffect(() => {
+    if (!leagues.length) return
+    const valid = new Set(leagues.map(l => l.name))
+    const stored = readPreferredLeagueName()
+    if (stored && valid.has(stored)) {
+      setLeague(stored)
+      return
+    }
+    setLeague(prev => (valid.has(prev) ? prev : leagues[0].name))
+  }, [leagues])
 
   function resetNav() {
     setSelectedTeam(null); setSelectedPlayer(null); setShowAwards(false)
@@ -378,7 +410,7 @@ export default function App() {
             const active = l.name === league
             return (
               <button key={l.name}
-                onClick={() => { setLeague(l.name); resetNav(); setLeagueOpen(false) }}
+                onClick={() => { writePreferredLeagueName(l.name); setLeague(l.name); resetNav(); setLeagueOpen(false) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', cursor: 'pointer', background: active ? 'rgba(55,77,245,0.25)' : 'rgb(13,18,38)', border: 'none', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', textAlign: 'left' }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'rgb(13,18,38)' }}>
