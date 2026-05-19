@@ -1,6 +1,150 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+const STAT_ICONS = [
+  { key: 'attack_pts',   icon: '⚡', label: 'Атака' },
+  { key: 'assists',      icon: '🤝', label: 'Пасы' },
+  { key: 'aces',         icon: '🎯', label: 'Эйсы' },
+  { key: 'blocks',       icon: '🛡', label: 'Блоки' },
+  { key: 'reception_pct', icon: '🔵', label: 'Приём', unit: '%' },
+]
+
+function MatchStatsModal({ match, stats, teams, onClose }) {
+  const home = teams[match.home_team_id]
+  const away = teams[match.away_team_id]
+  const homeWon = match.home_sets > match.away_sets
+  const homeStats = stats.filter(s => s.teams?.id === match.home_team_id)
+  const awayStats = stats.filter(s => s.teams?.id === match.away_team_id)
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const colW = 38
+
+  function StatsTable({ label, teamStats }) {
+    if (teamStats.length === 0) return null
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+          {label}
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', padding: '4px 0 6px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                Игрок
+              </th>
+              {STAT_ICONS.map(cfg => (
+                <th key={cfg.key} title={cfg.label} style={{ width: colW, textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.3)', padding: '4px 0 6px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontWeight: 400 }}>
+                  {cfg.icon}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {teamStats.map((s, i) => (
+              <tr key={s.player_id} style={{ background: i % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                <td style={{ fontSize: 13, fontWeight: 600, color: '#fff', padding: '8px 8px 8px 0', borderBottom: i < teamStats.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                  {s.players?.name || '—'}
+                </td>
+                {STAT_ICONS.map(cfg => {
+                  const v = s[cfg.key]
+                  const hasVal = v != null && v !== 0
+                  const display = !hasVal ? '—' : cfg.unit ? `${v}${cfg.unit}` : v
+                  return (
+                    <td key={cfg.key} style={{ width: colW, textAlign: 'center', fontSize: 13, fontWeight: hasVal ? 700 : 400, color: hasVal ? '#fff' : 'rgba(255,255,255,0.15)', padding: '8px 0', borderBottom: i < teamStats.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                      {display}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: 'rgb(11,17,37)', border: '1px solid rgba(255,255,255,0.13)', borderRadius: 18, width: '100%', maxWidth: 500, maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.85)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Шапка */}
+        <div style={{ padding: '16px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(55,77,245,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M3 20h18" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M7 20V12" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M12 20V7" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M17 20V4" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Статистика матча</span>
+            </div>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '5px 9px', borderRadius: 8 }}>✕</button>
+          </div>
+
+          {/* Команды + счёт */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, textAlign: 'right', fontSize: 14, fontWeight: 700, color: homeWon ? '#fff' : 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {home?.name || '—'}
+            </div>
+            <div style={{ textAlign: 'center', flexShrink: 0 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em' }}>
+                <span style={{ color: homeWon ? '#fff' : 'rgba(255,255,255,0.25)' }}>{match.home_sets}</span>
+                <span style={{ color: 'rgba(255,255,255,0.18)', margin: '0 5px' }}>–</span>
+                <span style={{ color: !homeWon ? '#fff' : 'rgba(255,255,255,0.25)' }}>{match.away_sets}</span>
+              </div>
+            </div>
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: !homeWon ? '#fff' : 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {away?.name || '—'}
+            </div>
+          </div>
+
+          {match.match_date && (
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 8 }}>
+              {new Date(match.match_date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {' · '}
+              {new Date(match.match_date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              {match.venue && ` · 📍 ${match.venue}`}
+            </div>
+          )}
+        </div>
+
+        {/* Тело */}
+        <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
+          {/* Легенда */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            {STAT_ICONS.map(cfg => (
+              <span key={cfg.key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                <span style={{ fontSize: 13 }}>{cfg.icon}</span>
+                <span>{cfg.label}</span>
+              </span>
+            ))}
+          </div>
+
+          <StatsTable label={`🏠 ${home?.name || 'Хозяева'}`} teamStats={homeStats} />
+          <StatsTable label={`✈ ${away?.name || 'Гости'}`} teamStats={awayStats} />
+
+          {homeStats.length === 0 && awayStats.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 32, color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+              Статистика не заполнена
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function getWeekBounds(offset = 0) {
   const now = new Date()
   const day = now.getDay() === 0 ? 6 : now.getDay() - 1 // Monday=0
@@ -24,7 +168,7 @@ function groupByDate(matches) {
   }, {})
 }
 
-function MatchCard({ match, teams, showDate = false, onSelectTeam }) {
+function MatchCard({ match, teams, showDate = false, onSelectTeam, hasStats, onShowStats }) {
   const home = teams[match.home_team_id]
   const away = teams[match.away_team_id]
   const finished = match.status === 'finished'
@@ -96,6 +240,20 @@ function MatchCard({ match, teams, showDate = false, onSelectTeam }) {
 
       {/* Media icons + status dot */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {finished && hasStats && (
+          <button
+            onClick={e => { e.stopPropagation(); onShowStats && onShowStats() }}
+            style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(55,77,245,0.18)', border: '1px solid rgba(55,77,245,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            title="Статистика матча"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M3 20h18" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M7 20V12" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M12 20V7" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M17 20V4" stroke="#8b97ff" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        )}
         {finished && match.photo_url && (
           <a href={match.photo_url} target="_blank" rel="noopener noreferrer"
             style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
@@ -123,7 +281,7 @@ function MatchCard({ match, teams, showDate = false, onSelectTeam }) {
   )
 }
 
-function WeekBlock({ title, icon, matches, teams, accent, emptyText, onSelectTeam }) {
+function WeekBlock({ title, icon, matches, teams, accent, emptyText, onSelectTeam, statsMap, onShowStats }) {
   if (matches.length === 0) return (
     <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 0 }}>
@@ -136,7 +294,6 @@ function WeekBlock({ title, icon, matches, teams, accent, emptyText, onSelectTea
 
   return (
     <div style={{ marginBottom: 28 }}>
-      {/* Section header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <div style={{ width: 3, height: 20, borderRadius: 2, background: accent }} />
         <span style={{ fontSize: 16 }}>{icon}</span>
@@ -146,7 +303,12 @@ function WeekBlock({ title, icon, matches, teams, accent, emptyText, onSelectTea
         </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {matches.map(m => <MatchCard key={m.id} match={m} teams={teams} showDate={true} onSelectTeam={onSelectTeam} />)}
+        {matches.map(m => (
+          <MatchCard key={m.id} match={m} teams={teams} showDate={true} onSelectTeam={onSelectTeam}
+            hasStats={(statsMap[m.id]?.length || 0) > 0}
+            onShowStats={() => onShowStats(m, statsMap[m.id] || [])}
+          />
+        ))}
       </div>
     </div>
   )
@@ -155,28 +317,37 @@ function WeekBlock({ title, icon, matches, teams, accent, emptyText, onSelectTea
 export default function Schedule({ league, seasonId, onSelectTeam }) {
   const [matches, setMatches] = useState([])
   const [teams, setTeams] = useState({})
+  const [statsMap, setStatsMap] = useState({})
   const [loading, setLoading] = useState(true)
+  const [statsModal, setStatsModal] = useState(null) // { match, stats }
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       try {
-        let matchQuery = supabase
-          .from('matches')
-          .select('id, league, home_team_id, away_team_id, match_date, venue, status, home_sets, away_sets, photo_url, video_url, season_id')
-          .eq('league', league)
-          .order('match_date')
-
         const [{ data: matchesData, error: me }, { data: teamsData, error: te }] = await Promise.all([
-          matchQuery,
+          supabase
+            .from('matches')
+            .select('id, league, home_team_id, away_team_id, match_date, venue, status, home_sets, away_sets, photo_url, video_url, season_id')
+            .eq('league', league)
+            .order('match_date'),
           supabase.from('teams').select('*').eq('league', league),
         ])
         if (me || te) { console.error('Supabase error:', me || te); setLoading(false); return }
 
         const matchIds = (matchesData || []).map(m => m.id)
-        const { data: setsData } = matchIds.length > 0
-          ? await supabase.from('set_scores').select('*').in('match_id', matchIds)
-          : { data: [] }
+
+        const [{ data: setsData }, { data: statsData, error: statsErr }] = await Promise.all([
+          matchIds.length > 0
+            ? supabase.from('set_scores').select('*').in('match_id', matchIds)
+            : Promise.resolve({ data: [] }),
+          matchIds.length > 0
+            ? supabase
+                .from('match_stats')
+                .select('match_id, player_id, attack_pts, blocks, aces, assists, reception_pct, players(name), teams(id, name)')
+                .in('match_id', matchIds)
+            : Promise.resolve({ data: [] }),
+        ])
 
         const setsMap = (setsData || []).reduce((acc, s) => {
           if (!acc[s.match_id]) acc[s.match_id] = []
@@ -184,8 +355,15 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
           return acc
         }, {})
 
+        const newStatsMap = (statsData || []).reduce((acc, s) => {
+          if (!acc[s.match_id]) acc[s.match_id] = []
+          acc[s.match_id].push(s)
+          return acc
+        }, {})
+
         const teamsMap = (teamsData || []).reduce((acc, t) => ({ ...acc, [t.id]: t }), {})
         setTeams(teamsMap)
+        setStatsMap(newStatsMap)
         const allMatches = (matchesData || []).map(m => ({ ...m, set_scores: setsMap[m.id] || [] }))
         const filtered = seasonId ? allMatches.filter(m => m.season_id === seasonId) : allMatches
         setMatches(filtered)
@@ -224,8 +402,19 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
 
   const grouped = groupByDate(matches)
 
+  const showStats = (match, stats) => setStatsModal({ match, stats })
+
   return (
     <div>
+      {statsModal && (
+        <MatchStatsModal
+          match={statsModal.match}
+          stats={statsModal.stats}
+          teams={teams}
+          onClose={() => setStatsModal(null)}
+        />
+      )}
+
       {/* This week */}
       <WeekBlock
         title="Игры на этой неделе"
@@ -242,6 +431,8 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
         accent="#374DF5"
         emptyText="На этой неделе игр нет"
         onSelectTeam={onSelectTeam}
+        statsMap={statsMap}
+        onShowStats={showStats}
       />
 
       {/* Last week results */}
@@ -258,6 +449,8 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
         accent="#5BB849"
         emptyText="На прошлой неделе игр не было"
         onSelectTeam={onSelectTeam}
+        statsMap={statsMap}
+        onShowStats={showStats}
       />
 
       {/* All games section header */}
@@ -282,7 +475,12 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {dayMatches.map(match => <MatchCard key={match.id} match={match} teams={teams} onSelectTeam={onSelectTeam} />)}
+              {dayMatches.map(match => (
+                <MatchCard key={match.id} match={match} teams={teams} onSelectTeam={onSelectTeam}
+                  hasStats={(statsMap[match.id]?.length || 0) > 0}
+                  onShowStats={() => showStats(match, statsMap[match.id] || [])}
+                />
+              ))}
             </div>
           </div>
         ))}
