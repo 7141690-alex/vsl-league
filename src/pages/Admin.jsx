@@ -322,14 +322,17 @@ function AnalyticsAdmin() {
     setError('')
     try {
       const pageSize = 1000
+      const maxPages = 20
+      const yearAgo = new Date(Date.now() - 366 * 24 * 60 * 60 * 1000).toISOString()
       let from = 0
       let all = []
 
-      while (true) {
+      for (let page = 0; page < maxPages; page++) {
         const to = from + pageSize - 1
         const { data, error: fetchError } = await supabase
           .from('site_visit_events')
           .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer, metadata')
+          .gte('created_at', yearAgo)
           .order('created_at', { ascending: false })
           .range(from, to)
 
