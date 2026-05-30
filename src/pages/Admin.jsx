@@ -151,7 +151,7 @@ export default function Admin() {
   }
 
   async function loadMatches() {
-    const { data } = await supabase.from('matches').select('*, set_scores(*)').order('match_date')
+    const { data } = await supabase.from('matches').select('*, set_scores(*)').order('match_date', { ascending: false })
     setMatches(data || [])
   }
 
