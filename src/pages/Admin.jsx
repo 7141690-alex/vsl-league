@@ -1675,11 +1675,11 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
   useEffect(() => {
     if (form.team_id) {
       let q = supabase.from('team_memberships')
-        .select('player_id, players(id, name)')
+        .select('player_id, jersey_number, players(id, name)')
         .eq('team_id', form.team_id)
       q = adminSeason?.id ? q.eq('season_id', adminSeason.id) : q.is('left_at', null)
       q.then(({ data }) => {
-        const ps = (data || []).map(m => m.players).filter(Boolean)
+        const ps = (data || []).map(m => m.players ? { ...m.players, jersey_number: m.jersey_number } : null).filter(Boolean)
         ps.sort((a, b) => a.name.localeCompare(b.name))
         setPlayers(ps)
       })
@@ -1756,7 +1756,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
               <div style={labelStyle}>Игрок</div>
               <select value={form.player_id} onChange={e => setForm(f => ({ ...f, player_id: e.target.value }))} style={inp} disabled={!form.team_id}>
                 <option value="">— выберите —</option>
-                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {players.map(p => <option key={p.id} value={p.id}>{p.jersey_number != null ? `#${p.jersey_number} ${p.name}` : p.name}</option>)}
               </select>
             </div>
           </div>
