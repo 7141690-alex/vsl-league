@@ -5,7 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .claude/worktrees — рабочие копии репозитория; без этого линт (и vitest)
+  // прогоняют по несколько копий одного и того же кода.
+  globalIgnores(['dist', '.claude', 'scripts/restore-output']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -23,7 +25,18 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Компоненты в JSX плагином react не отслеживаются (его тут нет),
+      // поэтому имена с большой буквы не считаем неиспользуемыми.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+  {
+    // Serverless-функции Vercel и служебные скрипты выполняются в Node,
+    // а не в браузере: без этого process и Buffer — no-undef.
+    files: ['api/**/*.js', 'scripts/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
     },
   },
 ])

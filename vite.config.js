@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
+    // Иначе тесты прогоняются ещё и из копий репозитория в .claude/worktrees.
+    exclude: ['node_modules/**', 'dist/**', '.claude/**'],
   },
   plugins: [
     react(),

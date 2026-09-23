@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { isWin, setsFor } from '../lib/standings'
+import { filterPast, filterUpcoming } from '../lib/matches'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
 const POSITION_SHORT = { setter: 'Связка', outside: 'Доигровщик', opposite: 'Диага', middle: 'ЦБ', libero: 'Либеро' }
@@ -23,8 +25,7 @@ function MatchRow({ match, teamId, teams }) {
   const isHome = match.home_team_id === teamId
   const opponent = teams[isHome ? match.away_team_id : match.home_team_id]
   const finished = match.status === 'finished'
-  const mySets = isHome ? match.home_sets : match.away_sets
-  const oppSets = isHome ? match.away_sets : match.home_sets
+  const { mySets, oppSets } = setsFor(match, teamId)
   const won = finished && mySets > oppSets
   const sets = (match.set_scores || []).sort((a, b) => a.set_number - b.set_number)
 
@@ -158,20 +159,9 @@ export default function TeamPage({ team, league, seasonId, onBack, onSelectPlaye
     load()
   }, [team.id, league, seasonId])
 
-  const pastMatches = matches
-    .filter(m => m.status === 'finished')
-    .sort((a, b) => new Date(b.match_date) - new Date(a.match_date))
-
-  const upcomingMatches = matches
-    .filter(m => m.status === 'scheduled')
-    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
-
-  const wins = pastMatches.filter(m => {
-    const isHome = m.home_team_id === team.id
-    const my = isHome ? m.home_sets : m.away_sets
-    const opp = isHome ? m.away_sets : m.home_sets
-    return my > opp
-  }).length
+  const pastMatches = filterPast(matches)
+  const upcomingMatches = filterUpcoming(matches)
+  const wins = pastMatches.filter(m => isWin(m, team.id)).length
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { filterBySeason } from '../lib/matches'
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
@@ -21,7 +22,7 @@ export default function CalendarWidget({ league, seasonId }) {
         supabase.from('teams').select('*').eq('league', league),
       ])
       const all = matchesData || []
-      setMatches(seasonId ? all.filter(m => m.season_id === seasonId) : all)
+      setMatches(filterBySeason(all, seasonId))
       setTeams((teamsData || []).reduce((a, t) => ({ ...a, [t.id]: t }), {}))
     }
     load()

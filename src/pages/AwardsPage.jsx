@@ -59,7 +59,7 @@ export default function AwardsPage({ league, seasonId, leagueName, onBack, onSel
       {/* Summary pills */}
       {awards.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-          {Object.entries(AWARD_CONFIG).map(([key, cfg]) => {
+          {Object.keys(AWARD_CONFIG).map(key => {
             if (!countByNom[key]) return null
             return (
               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 12px' }}>

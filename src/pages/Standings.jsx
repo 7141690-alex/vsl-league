@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import CalendarWidget from '../components/CalendarWidget'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
+import { buildStandings } from '../lib/standings'
+import { filterBySeason } from '../lib/matches'
 
 export default function Standings({ league, seasonId, onSelectTeam, onShowAwards, onSelectPlayer }) {
   const [teams, setTeams] = useState([])
@@ -34,36 +36,13 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
       const [{ data: teamsData }, { data: matchesData }] = await Promise.all([teamsPromise, matchQuery])
       setTeams(teamsData || [])
       const allMatches = matchesData || []
-      setMatches(seasonId ? allMatches.filter(m => m.season_id === seasonId) : allMatches)
+      setMatches(filterBySeason(allMatches, seasonId))
       setLoading(false)
     }
     load()
   }, [league, seasonId])
 
-  const standings = teams.map(team => {
-    const teamMatches = matches.filter(
-      m => m.home_team_id === team.id || m.away_team_id === team.id
-    )
-    let wins = 0, losses = 0, setsWon = 0, setsLost = 0, points = 0
-
-    teamMatches.forEach(m => {
-      const isHome = m.home_team_id === team.id
-      const mySets = isHome ? m.home_sets : m.away_sets
-      const oppSets = isHome ? m.away_sets : m.home_sets
-      setsWon += mySets
-      setsLost += oppSets
-      const won = mySets > oppSets
-      if (won) {
-        wins++
-        points += oppSets === 2 ? 2 : 3
-      } else {
-        losses++
-        points += mySets === 2 ? 1 : 0
-      }
-    })
-
-    return { ...team, played: teamMatches.length, wins, losses, setsWon, setsLost, points }
-  }).sort((a, b) => b.points - a.points || b.wins - a.wins)
+  const standings = buildStandings(teams, matches)
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">

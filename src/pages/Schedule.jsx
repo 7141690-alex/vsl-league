@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { filterBySeason } from '../lib/matches'
 
 const STAT_ICONS = [
   { key: 'attack_pts',   icon: '⚡', label: 'Атака' },
@@ -349,6 +350,8 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
             : Promise.resolve({ data: [] }),
         ])
 
+        if (statsErr) console.error('Supabase error (match_stats):', statsErr)
+
         const setsMap = (setsData || []).reduce((acc, s) => {
           if (!acc[s.match_id]) acc[s.match_id] = []
           acc[s.match_id].push(s)
@@ -365,7 +368,7 @@ export default function Schedule({ league, seasonId, onSelectTeam }) {
         setTeams(teamsMap)
         setStatsMap(newStatsMap)
         const allMatches = (matchesData || []).map(m => ({ ...m, set_scores: setsMap[m.id] || [] }))
-        const filtered = seasonId ? allMatches.filter(m => m.season_id === seasonId) : allMatches
+        const filtered = filterBySeason(allMatches, seasonId)
         setMatches(filtered)
       } catch(e) {
         console.error(e)

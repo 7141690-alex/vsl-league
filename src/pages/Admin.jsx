@@ -66,6 +66,19 @@ const labelStyle = {
 
 // ─── Журнал действий ─────────────────────────────────────────────────────────
 
+// Раньше результат мутаций почти нигде не проверялся: при отказе RLS или
+// сетевой ошибке интерфейс показывал успех, данные не менялись, а в журнал
+// всё равно уходила запись о «выполненном» действии. Журнал при этом —
+// резервный источник восстановления, так что врать он не должен.
+async function run(query, label) {
+  const { error } = await query
+  if (error) {
+    alert(`${label}: ${error.message}`)
+    return false
+  }
+  return true
+}
+
 async function logAction(userEmail, action, entityType, entityName, details = {}) {
   try {
     await supabase.from('activity_log').insert({
@@ -352,16 +365,19 @@ function AnalyticsAdmin() {
 
       for (let page = 0; page < maxPages; page++) {
         const to = from + pageSize - 1
+        // Раньше тянулось поле metadata целиком — несколько килобайт jsonb
+        // на строку, до 20 000 строк. Из него используются ровно два значения,
+        // поэтому забираем только их.
         const { data, error: fetchError } = await supabase
           .from('site_visit_events')
-          .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer, metadata')
+          .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer, user_agent:metadata->device->>user_agent, platform:metadata->device->>platform')
           .gte('created_at', yearAgo)
           .order('created_at', { ascending: false })
           .range(from, to)
 
         if (fetchError) throw fetchError
         const chunk = data || []
-        all = [...all, ...chunk]
+        all.push(...chunk) // не all = [...all, ...chunk]: то было копирование на каждой странице
         if (chunk.length < pageSize) break
         from += pageSize
       }
@@ -660,8 +676,8 @@ function extractReferrerHost(referrer) {
 }
 
 function detectDeviceCategory(row) {
-  const ua = String(row?.metadata?.device?.user_agent || '').toLowerCase()
-  const platform = String(row?.metadata?.device?.platform || '').toLowerCase()
+  const ua = String(row?.user_agent || '').toLowerCase()
+  const platform = String(row?.platform || '').toLowerCase()
 
   if (ua.includes('android')) return 'Android телефон'
   if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'iPhone/iPad'
@@ -860,7 +876,7 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
 
   async function deleteTeam(id, teamName) {
     if (!confirm(`Удалить команду «${teamName}»?`)) return
-    await supabase.from('teams').delete().eq('id', id)
+    if (!await run(supabase.from('teams').delete().eq('id', id), 'Не удалось удалить команду')) return
     await logAction(userEmail, 'Удалено', 'команда', teamName)
     onUpdate()
   }
@@ -872,13 +888,14 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
 
   async function saveEdit(id) {
     if (!editingData.name?.trim()) return
-    await supabase.from('teams').update({
+    const ok = await run(supabase.from('teams').update({
       name: editingData.name.trim(),
       league: editingData.league,
       photo_url: editingData.photo_url?.trim() || null,
       instagram_url: editingData.instagram_url?.trim() || null,
       active: editingData.active,
-    }).eq('id', id)
+    }).eq('id', id), 'Не удалось сохранить команду')
+    if (!ok) return
     await logAction(userEmail, 'Изменено', 'команда', editingData.name.trim())
     setEditingId(null)
     onUpdate()
@@ -1126,14 +1143,17 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
       }
 
       if (matchId && sets.length > 0) {
-        const { error: delErr } = await supabase.from('set_scores').delete().eq('match_id', matchId)
-        if (delErr) throw delErr
+        // Одной транзакцией: раньше delete и insert шли раздельно, и сбой
+        // между ними стирал счёт по сетам насовсем.
         const setData = sets.map((s, i) => ({
-          match_id: matchId, set_number: i + 1,
+          set_number: i + 1,
           home_points: parseInt(s.home) || 0, away_points: parseInt(s.away) || 0,
         }))
-        const { error: insErr } = await supabase.from('set_scores').insert(setData)
-        if (insErr) throw insErr
+        const { error: setsErr } = await supabase.rpc('replace_set_scores', {
+          p_match_id: matchId,
+          p_rows: setData,
+        })
+        if (setsErr) throw setsErr
       }
 
       resetForm()
@@ -1171,7 +1191,7 @@ function MatchesAdmin({ matches, teams, leagues, userEmail, onUpdate, adminSeaso
 
   async function deleteMatch(id, home, away) {
     if (!confirm('Удалить игру?')) return
-    await supabase.from('matches').delete().eq('id', id)
+    if (!await run(supabase.from('matches').delete().eq('id', id), 'Не удалось удалить матч')) return
     await logAction(userEmail, 'Удалено', 'игра', `${home} vs ${away}`)
     onUpdate()
   }
@@ -1416,7 +1436,7 @@ function PlayersAdmin({ teams, leagues, userEmail, adminSeason }) {
     if (created && newForm.team_id) {
       const membership = { player_id: created.id, team_id: newForm.team_id, jersey_number: parseInt(newForm.jersey_number) || null, is_captain: false, joined_at: new Date().toISOString().slice(0, 10) }
       if (adminSeason?.id) membership.season_id = adminSeason.id
-      await supabase.from('team_memberships').insert(membership)
+      await run(supabase.from('team_memberships').insert(membership), 'Игрок создан, но не добавлен в команду')
     }
     await logAction(userEmail, 'Добавлено', 'игрок', newForm.name.trim(), { gender: newForm.gender })
     setNewForm({ name: '', gender: 'male', height: '', birth_date: '', position: '', position2: '', photo_url: '', team_id: '', jersey_number: '' })
@@ -1425,7 +1445,8 @@ function PlayersAdmin({ teams, leagues, userEmail, adminSeason }) {
 
   async function saveEdit(id) {
     if (!editData.name?.trim()) return
-    await supabase.from('players').update({ name: editData.name.trim(), gender: editData.gender, height: parseInt(editData.height) || null, birth_date: editData.birth_date || null, position: editData.position || null, position2: editData.position2 || null, photo_url: editData.photo_url?.trim() || null }).eq('id', id)
+    const okPlayer = await run(supabase.from('players').update({ name: editData.name.trim(), gender: editData.gender, height: parseInt(editData.height) || null, birth_date: editData.birth_date || null, position: editData.position || null, position2: editData.position2 || null, photo_url: editData.photo_url?.trim() || null }).eq('id', id), 'Не удалось сохранить игрока')
+    if (!okPlayer) return
     await logAction(userEmail, 'Изменено', 'игрок', editData.name.trim())
     setEditId(null)
     load()
@@ -1433,19 +1454,13 @@ function PlayersAdmin({ teams, leagues, userEmail, adminSeason }) {
 
   async function deletePlayer(id, name) {
     if (!confirm(`Удалить игрока «${name}»? Все его членства и номинации будут удалены.`)) return
-    await supabase.from('players').delete().eq('id', id)
+    if (!await run(supabase.from('players').delete().eq('id', id), 'Не удалось удалить игрока')) return
     await logAction(userEmail, 'Удалено', 'игрок', name)
     load()
   }
 
   async function addToTeam(playerId, playerName) {
     if (!memberForm.team_id) return
-    if (memberForm.is_captain) {
-      let capQuery = supabase.from('team_memberships').select('id').eq('team_id', memberForm.team_id).eq('is_captain', true)
-      capQuery = adminSeason?.id ? capQuery.eq('season_id', adminSeason.id) : capQuery.is('left_at', null)
-      const { data: existing } = await capQuery
-      if (existing?.length) await supabase.from('team_memberships').update({ is_captain: false }).in('id', existing.map(x => x.id))
-    }
     const teamName = teams.find(t => t.id === memberForm.team_id)?.name || memberForm.team_id
     const insertData = {
       player_id: playerId, team_id: memberForm.team_id,
@@ -1454,7 +1469,20 @@ function PlayersAdmin({ teams, leagues, userEmail, adminSeason }) {
       joined_at: memberForm.joined_at || today,
       ...(adminSeason?.id ? { season_id: adminSeason.id } : {}),
     }
-    await supabase.from('team_memberships').insert(insertData)
+    if (!await run(supabase.from('team_memberships').insert(insertData), 'Не удалось добавить игрока в команду')) return
+
+    // Прежнего капитана снимаем ПОСЛЕ успешной вставки: при обратном порядке
+    // сбой вставки оставлял команду вообще без капитана.
+    if (memberForm.is_captain) {
+      let capQuery = supabase.from('team_memberships').select('id, player_id').eq('team_id', memberForm.team_id).eq('is_captain', true)
+      capQuery = adminSeason?.id ? capQuery.eq('season_id', adminSeason.id) : capQuery.is('left_at', null)
+      const { data: existing } = await capQuery
+      const others = (existing || []).filter(x => x.player_id !== playerId).map(x => x.id)
+      if (others.length) {
+        await run(supabase.from('team_memberships').update({ is_captain: false }).in('id', others), 'Новый капитан назначен, но прежний не снят')
+      }
+    }
+
     await logAction(userEmail, 'Добавлен в команду', 'игрок', playerName, { team: teamName, season: adminSeason?.name })
     setAddTeamId(null)
     setMemberForm({ team_id: '', jersey_number: '', is_captain: false, joined_at: today })
@@ -1462,7 +1490,7 @@ function PlayersAdmin({ teams, leagues, userEmail, adminSeason }) {
   }
 
   async function removeFromTeam(membershipId, playerName) {
-    await supabase.from('team_memberships').delete().eq('id', membershipId)
+    if (!await run(supabase.from('team_memberships').delete().eq('id', membershipId), 'Не удалось убрать игрока из команды')) return
     await logAction(userEmail, 'Убран из команды', 'игрок', playerName, { season: adminSeason?.name })
     load()
   }
@@ -1759,7 +1787,7 @@ function AwardsAdmin({ teams, leagues, userEmail, adminSeason }) {
 
   async function deleteAward(id, awardInfo) {
     if (!confirm('Удалить награду?')) return
-    await supabase.from('awards').delete().eq('id', id)
+    if (!await run(supabase.from('awards').delete().eq('id', id), 'Не удалось удалить награду')) return
     await logAction(userEmail, 'Удалено', 'награда', awardInfo)
     loadAwards()
   }
@@ -1886,7 +1914,8 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
 
   async function saveEdit(id) {
     if (!editData.display_name?.trim()) return
-    await supabase.from('leagues').update({ display_name: editData.display_name.trim(), gender: editData.gender, active: editData.active, playoff_spots: parseInt(editData.playoff_spots) || 3, relegation_spots: parseInt(editData.relegation_spots) || 2 }).eq('id', id)
+    const okLeague = await run(supabase.from('leagues').update({ display_name: editData.display_name.trim(), gender: editData.gender, active: editData.active, playoff_spots: parseInt(editData.playoff_spots) || 3, relegation_spots: parseInt(editData.relegation_spots) || 2 }).eq('id', id), 'Не удалось сохранить лигу')
+    if (!okLeague) return
     await logAction(userEmail, 'Изменено', 'лига', editData.display_name.trim())
     setEditId(null)
     load()
@@ -1895,7 +1924,7 @@ function LeaguesAdmin({ userEmail, onUpdate }) {
 
   async function deleteLeague(id, name) {
     if (!confirm(`Удалить лигу «${name}»?\n\nКоманды и игры с league="${name}" останутся в БД, но лига исчезнет из переключателя.`)) return
-    await supabase.from('leagues').delete().eq('id', id)
+    if (!await run(supabase.from('leagues').delete().eq('id', id), 'Не удалось удалить лигу')) return
     await logAction(userEmail, 'Удалено', 'лига', name)
     load()
     onUpdate()
@@ -2043,11 +2072,19 @@ function SeasonsAdmin({ userEmail, onUpdate }) {
   async function addSeason(e) {
     e.preventDefault()
     if (!form.name.trim()) return
-    if (form.is_current) {
-      await supabase.from('seasons').update({ is_current: false }).eq('is_current', true)
-    }
-    const { error } = await supabase.from('seasons').insert({ name: form.name.trim(), is_current: form.is_current })
+    const { data: created, error } = await supabase
+      .from('seasons')
+      .insert({ name: form.name.trim(), is_current: false })
+      .select()
+      .single()
     if (error) { alert('Ошибка: ' + error.message); return }
+    // Сезон создаётся, и только потом становится текущим — иначе неудачная
+    // вставка после снятия флага оставляла лигу без текущего сезона.
+    if (form.is_current && created?.id) {
+      if (!await run(supabase.rpc('set_current_season', { p_season_id: created.id }), 'Сезон создан, но не стал текущим')) {
+        load(); onUpdate(); return
+      }
+    }
     await logAction(userEmail, 'Добавлено', 'сезон', form.name.trim())
     setForm({ name: '', is_current: false })
     load()
@@ -2056,10 +2093,14 @@ function SeasonsAdmin({ userEmail, onUpdate }) {
 
   async function saveEdit(id) {
     if (!editData.name?.trim()) return
+    const okSeason = await run(
+      supabase.from('seasons').update({ name: editData.name.trim() }).eq('id', id),
+      'Не удалось сохранить сезон',
+    )
+    if (!okSeason) return
     if (editData.is_current) {
-      await supabase.from('seasons').update({ is_current: false }).neq('id', id)
+      if (!await run(supabase.rpc('set_current_season', { p_season_id: id }), 'Не удалось сделать сезон текущим')) return
     }
-    await supabase.from('seasons').update({ name: editData.name.trim(), is_current: editData.is_current }).eq('id', id)
     await logAction(userEmail, 'Изменено', 'сезон', editData.name.trim())
     setEditId(null)
     load()
@@ -2068,15 +2109,16 @@ function SeasonsAdmin({ userEmail, onUpdate }) {
 
   async function deleteSeason(id, name) {
     if (!confirm(`Удалить сезон «${name}»?\n\nИгры и награды, привязанные к этому сезону, останутся в БД.`)) return
-    await supabase.from('seasons').delete().eq('id', id)
+    if (!await run(supabase.from('seasons').delete().eq('id', id), 'Не удалось удалить сезон')) return
     await logAction(userEmail, 'Удалено', 'сезон', name)
     load()
     onUpdate()
   }
 
   async function setCurrent(id) {
-    await supabase.from('seasons').update({ is_current: false }).neq('id', id)
-    await supabase.from('seasons').update({ is_current: true }).eq('id', id)
+    // Один вызов вместо двух update: сбой между ними оставлял лигу
+    // вообще без текущего сезона.
+    if (!await run(supabase.rpc('set_current_season', { p_season_id: id }), 'Не удалось сменить текущий сезон')) return
     load()
     onUpdate()
   }
@@ -2357,11 +2399,21 @@ function MatchStatsPanel({ match, teamsMap, adminSeason, onClose }) {
       }
     })
 
-    await supabase.from('match_stats').delete().eq('match_id', match.id)
     const toInsert = rows.filter(r => r.attack_pts > 0 || r.blocks > 0 || r.aces > 0 || r.assists > 0 || r.reception_pct != null)
-    if (toInsert.length > 0) await supabase.from('match_stats').insert(toInsert)
+
+    // Одной транзакцией и с проверкой результата: раньше статистика сначала
+    // удалялась, потом вставлялась, и ни один из шагов не проверялся —
+    // при сбое вставки статистика матча пропадала, а форма писала «Сохранено».
+    const { error: statsErr } = await supabase.rpc('replace_match_stats', {
+      p_match_id: match.id,
+      p_rows: toInsert,
+    })
 
     setSaving(false)
+    if (statsErr) {
+      alert('Не удалось сохранить статистику: ' + statsErr.message)
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
@@ -2546,14 +2598,14 @@ function SubAdminsAdmin({ userEmail }) {
   }
 
   async function saveEditTabs(adminId) {
-    await supabase.from('admin_users').update({ allowed_tabs: editingTabs }).eq('id', adminId)
+    if (!await run(supabase.from('admin_users').update({ allowed_tabs: editingTabs }).eq('id', adminId), 'Не удалось сохранить доступы')) return
     setEditingId(null)
     loadAdmins()
   }
 
   async function deleteAdmin(id, email) {
     if (!confirm(`Удалить администратора ${email}?`)) return
-    await supabase.from('admin_users').delete().eq('id', id)
+    if (!await run(supabase.from('admin_users').delete().eq('id', id), 'Не удалось удалить администратора')) return
     loadAdmins()
   }
 

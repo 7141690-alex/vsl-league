@@ -156,3 +156,18 @@ npm run test  # или npx vitest run
 Добавляются через Supabase Dashboard:
 `https://supabase.com/dashboard/project/gvkdumzyhdguupdhcqeb/auth/users`
 → Add user → Create new user → email + пароль
+
+
+---
+
+## Серверная архитектура
+
+Если в рамках задачи изменяется что-то на уровне сервера Sreda (`78.111.89.182`) — порты, nginx-конфиги, Docker-контейнеры, systemd-сервисы, PM2-процессы — **обязательно обнови `/root/SERVER_MAP.md`** на сервере.
+
+Примеры изменений, требующих обновления карты:
+- изменился или добавился порт
+- добавлен/удалён Docker-контейнер или systemd-сервис
+- изменился nginx-конфиг в `/etc/nginx/sites-enabled/`
+- добавлен новый PM2-процесс
+
+Корневые файлы сервера: `/root/CLAUDE.md` (инструкции агенту) и `/root/SERVER_MAP.md` (карта всех сервисов).
