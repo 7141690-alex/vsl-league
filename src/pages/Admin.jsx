@@ -2560,35 +2560,39 @@ function SubAdminsAdmin({ userEmail }) {
     setSaving(true)
     setFormError('')
 
-    // Запись в admin_users создаём только вместе с учётной записью. Иначе
-    // email «админа» без аккаунта мог занять кто угодно обычной регистрацией —
-    // is_admin() сверяет только auth.email().
-    const { createClient } = await import('@supabase/supabase-js')
-    const tempClient = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-      { auth: { storageKey: 'vsl-temp-create', persistSession: false } }
-    )
-    const { error: authError } = await tempClient.auth.signUp({ email: formEmail, password: formPassword })
-    if (authError && !authError.message.toLowerCase().includes('already registered')) {
-      setFormError(authError.message)
+    // Учётная запись и запись в admin_users создаются на сервере через
+    // Admin API (/api/create-admin), а не обычным auth.signUp() с anon-ключом:
+    // signUp() блокируется настройкой «Allow new users to sign up», которую
+    // мы выключаем для защиты от посторонней регистрации, а Admin API её
+    // не видит.
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setFormError('Сессия истекла, войдите заново')
       setSaving(false)
       return
     }
 
-    const { error: dbError } = await supabase.from('admin_users').upsert(
-      { email: formEmail, is_super_admin: false, allowed_tabs: formTabs, created_by: userEmail },
-      { onConflict: 'email' }
-    )
-
-    if (dbError) {
-      setFormError(dbError.message)
-    } else {
-      setFormEmail('')
-      setFormPassword('')
-      setFormTabs([])
-      setShowForm(false)
-      loadAdmins()
+    try {
+      const res = await fetch('/api/create-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ email: formEmail, password: formPassword, allowedTabs: formTabs }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) {
+        setFormError(json.error || `Ошибка ${res.status}`)
+      } else {
+        setFormEmail('')
+        setFormPassword('')
+        setFormTabs([])
+        setShowForm(false)
+        loadAdmins()
+      }
+    } catch (e) {
+      setFormError(e.message)
     }
     setSaving(false)
   }
