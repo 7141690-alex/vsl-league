@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 
+const MAX_LOGO_BYTES = 5 * 1024 * 1024
+const ALLOWED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+
 const POSITIONS = [
   { key: 'setter', label: 'Связующий' },
   { key: 'outside', label: 'Доигровщик' },
@@ -105,6 +108,7 @@ export default function Admin() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [allowedTabs, setAllowedTabs] = useState([])
   const [adminRecordLoaded, setAdminRecordLoaded] = useState(false)
+  const [adminLoadError, setAdminLoadError] = useState('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -117,16 +121,19 @@ export default function Admin() {
   }, [session])
 
   async function loadAdminRecord() {
+    setAdminLoadError('')
     const { data, error } = await supabase
       .from('admin_users')
       .select('*')
       .eq('email', session?.user?.email || '')
       .maybeSingle()
 
+    // Любая ошибка — это отказ в доступе, а не «старый режим с полными правами»:
+    // раньше сетевой сбой или отказ RLS выдавал права суперадмина.
     if (error) {
-      // Таблица не существует или ошибка — старый режим, полный доступ
-      setIsSuperAdmin(true)
-      setAllowedTabs(['teams', 'matches', 'players', 'awards', 'analytics', 'leagues', 'seasons', 'log'])
+      setIsSuperAdmin(false)
+      setAllowedTabs([])
+      setAdminLoadError('Не удалось проверить права доступа')
     } else if (data) {
       setIsSuperAdmin(data.is_super_admin)
       setAllowedTabs(data.allowed_tabs || [])
@@ -211,6 +218,22 @@ export default function Admin() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Загрузка...</div>
+      </div>
+    )
+  }
+
+  if (adminLoadError) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ ...card, padding: 32, textAlign: 'center', maxWidth: 380 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 8 }}>{adminLoadError}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>
+            Попробуйте обновить страницу или войти заново.
+          </div>
+          <button onClick={() => { setAdminRecordLoaded(false); loadAdminRecord() }} style={{ ...btnPrimary, marginRight: 8 }}>Повторить</button>
+          <button onClick={logout} style={btnSecondary}>Выйти</button>
+        </div>
       </div>
     )
   }
@@ -742,11 +765,29 @@ function TeamsAdmin({ teams, leagues, userEmail, onUpdate, adminSeason }) {
 
   async function uploadLogo(file, onDone) {
     const setter = onDone === 'form' ? setUploading : setEditUploading
+
+    // Те же ограничения проверяет и сервер; здесь — чтобы сразу сказать почему.
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      alert('Допустимы только PNG, JPEG, WEBP и GIF')
+      return
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      alert('Файл больше 5 МБ')
+      return
+    }
+
     setter(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { alert('Сессия истекла, войдите заново'); return }
+
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch('/api/upload-logo', { method: 'POST', body: fd })
+      const res = await fetch('/api/upload-logo', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: fd,
+      })
       const json = await res.json()
       if (!res.ok || json.error) { alert('Ошибка загрузки: ' + (json.error || res.status)); return }
       if (onDone === 'form') setForm(f => ({ ...f, photo_url: json.url }))
@@ -2442,7 +2483,6 @@ function SubAdminsAdmin({ userEmail }) {
   const [formEmail, setFormEmail] = useState('')
   const [formPassword, setFormPassword] = useState('')
   const [formTabs, setFormTabs] = useState([])
-  const [createAuth, setCreateAuth] = useState(true)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -2462,25 +2502,26 @@ function SubAdminsAdmin({ userEmail }) {
   async function handleCreate(e) {
     e.preventDefault()
     if (!formEmail) { setFormError('Введите email'); return }
-    if (createAuth && formPassword.length < 6) { setFormError('Пароль минимум 6 символов'); return }
+    if (formPassword.length < 12) { setFormError('Пароль минимум 12 символов'); return }
     if (formTabs.length === 0) { setFormError('Выберите хотя бы одну вкладку'); return }
 
     setSaving(true)
     setFormError('')
 
-    if (createAuth) {
-      const { createClient } = await import('@supabase/supabase-js')
-      const tempClient = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        { auth: { storageKey: 'vsl-temp-create', persistSession: false } }
-      )
-      const { error: authError } = await tempClient.auth.signUp({ email: formEmail, password: formPassword })
-      if (authError && !authError.message.toLowerCase().includes('already registered')) {
-        setFormError(authError.message)
-        setSaving(false)
-        return
-      }
+    // Запись в admin_users создаём только вместе с учётной записью. Иначе
+    // email «админа» без аккаунта мог занять кто угодно обычной регистрацией —
+    // is_admin() сверяет только auth.email().
+    const { createClient } = await import('@supabase/supabase-js')
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      { auth: { storageKey: 'vsl-temp-create', persistSession: false } }
+    )
+    const { error: authError } = await tempClient.auth.signUp({ email: formEmail, password: formPassword })
+    if (authError && !authError.message.toLowerCase().includes('already registered')) {
+      setFormError(authError.message)
+      setSaving(false)
+      return
     }
 
     const { error: dbError } = await supabase.from('admin_users').upsert(
@@ -2538,25 +2579,13 @@ function SubAdminsAdmin({ userEmail }) {
               <input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="admin@example.com" style={inp} />
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={createAuth}
-                onChange={e => setCreateAuth(e.target.checked)}
-                style={{ width: 15, height: 15, cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>Создать новый аккаунт (email + пароль)</span>
-            </label>
-
-            {createAuth && (
-              <div>
-                <div style={labelStyle}>Пароль</div>
-                <input type="password" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Минимум 6 символов" style={inp} />
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
-                  Если пользователь уже создан в Supabase — снимите галочку
-                </div>
+            <div>
+              <div style={labelStyle}>Пароль</div>
+              <input type="password" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Минимум 12 символов" style={inp} />
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+                Аккаунт создаётся сразу: права выдаются только существующей учётной записи.
               </div>
-            )}
+            </div>
 
             <div>
               <div style={labelStyle}>Доступные вкладки</div>
