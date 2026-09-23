@@ -149,11 +149,17 @@ SQL-файлы применяются вручную, журнала приме�
 |------|-----------|--------|
 | `scripts/site-visit-events.sql` | Таблица аналитики посещений, индексы, RLS | применён |
 | `scripts/rls-hardening.sql` | Право записи = членство в `admin_users` (после атаки 22.09.2026) | применён |
-| `scripts/rls-hardening-2.sql` | Закрывает саму `admin_users` (её первая миграция не покрывала), лимиты на анонимную запись в аналитику | **применить** |
-| `scripts/atomic-writes.sql` | RPC `replace_set_scores`, `replace_match_stats`, `set_current_season` — транзакционная замена вместо delete+insert | **применить** |
+| `scripts/rls-hardening-2.sql` | Закрывает саму `admin_users` (её первая миграция не покрывала), лимиты на анонимную запись в аналитику | применён |
+| `scripts/atomic-writes.sql` | RPC `replace_set_scores`, `replace_match_stats`, `set_current_season` — транзакционная замена вместо delete+insert | применён |
 
-Без `atomic-writes.sql` не сохранятся счёт по сетам, статистика матча и смена
-текущего сезона: админка вызывает эти RPC.
+Статус в таблице легко разъезжается с реальностью — сверяться запросом, а не
+доверять строке:
+
+```sql
+select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and proname in ('replace_set_scores','replace_match_stats','set_current_season');
+```
 
 В конце `rls-hardening-2.sql` — запросы для аудита политик. Прогонять после
 любых изменений RLS.

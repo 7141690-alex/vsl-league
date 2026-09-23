@@ -8,11 +8,6 @@ import TeamPage from './pages/TeamPage'
 import PlayerPage from './pages/PlayerPage'
 import AwardsPage from './pages/AwardsPage'
 import StatsPage from './pages/Stats'
-import Maintenance from './components/Maintenance'
-
-// Заглушка на время восстановления данных после атаки 22.09.2026.
-// Вернуть сайт в обычный режим: поставить false.
-const MAINTENANCE = true
 
 const IconStandings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
@@ -274,8 +269,6 @@ export default function App() {
       </div>
     )
   }
-
-  if (MAINTENANCE) return <Maintenance onAdmin={() => setShowAdmin(true)} />
 
   return (
     <div className="min-h-screen w-full" style={{ background: 'linear-gradient(160deg, #0b1120 0%, #0f2044 40%, #0b1120 100%)' }}>
