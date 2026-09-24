@@ -172,6 +172,13 @@ SUPABASE_SERVICE_KEY=... node scripts/backup.mjs
 На бесплатном тарифе Supabase нет PITR — после атаки 22.09.2026 данные пришлось
 восстанавливать из `activity_log`, потому что копий не было. Хранить вне сервера.
 
+**Автоматический бэкап на Contabo** (`ssh contabo`, пользователь `agent`):
+- `~/vsl-backup/` — `backup.mjs` (копия `scripts/backup.mjs`), `run.sh`, `.env` (ключ `SUPABASE_SERVICE_KEY`, права 600, только на сервере), `backup.log`, `data/<дата UTC>/*.json`.
+- cron: `0 3 * * * /home/agent/vsl-backup/run.sh` (каждый день 03:00 по времени сервера, UTC+5); копии старше 30 дней удаляются.
+- Проверка: `ssh contabo 'tail -20 ~/vsl-backup/backup.log; ls ~/vsl-backup/data'`. Ручной запуск: `ssh contabo '~/vsl-backup/run.sh'`.
+- При изменении `scripts/backup.mjs` (например, новые таблицы) — скопировать на сервер: `scp scripts/backup.mjs contabo:vsl-backup/`.
+- Если ротировали service_role ключ — обновить `.env` на сервере.
+
 ### Безопасность — что должно оставаться верным
 - `/api/upload-logo` работает с service-role ключом: он **обязан** проверять
   Bearer-токен сессии и членство в `admin_users`, лимит размера и тип файла по
