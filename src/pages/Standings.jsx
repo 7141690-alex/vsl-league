@@ -15,26 +15,21 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
     async function load() {
       setLoading(true)
 
-      // Конфиг лиги (зоны)
-      const { data: lgData } = await supabase.from('leagues').select('playoff_spots, relegation_spots').eq('name', league).single()
+      // Все запросы независимы — идут параллельно (раньше 3 шага подряд).
+      const [{ data: lgData }, seasonTeamsRes, { data: teamsData }, { data: matchesData }] = await Promise.all([
+        supabase.from('leagues').select('playoff_spots, relegation_spots').eq('name', league).single(),
+        seasonId
+          ? supabase.from('season_teams').select('team_id').eq('season_id', seasonId)
+          : Promise.resolve({ data: null }),
+        supabase.from('teams').select('*').eq('league', league),
+        supabase.from('matches').select('*').eq('league', league).eq('status', 'finished'),
+      ])
       setLeagueConfig(lgData)
 
-      // Команды: если есть сезон — получаем team_id из season_teams, затем загружаем команды по id
-      let teamsPromise
-      if (seasonId) {
-        const { data: stData } = await supabase.from('season_teams').select('team_id').eq('season_id', seasonId)
-        const teamIds = (stData || []).map(r => r.team_id)
-        teamsPromise = teamIds.length > 0
-          ? supabase.from('teams').select('*').in('id', teamIds).eq('league', league)
-          : Promise.resolve({ data: [] })
-      } else {
-        teamsPromise = supabase.from('teams').select('*').eq('league', league)
-      }
-
-      const matchQuery = supabase.from('matches').select('*').eq('league', league).eq('status', 'finished')
-
-      const [{ data: teamsData }, { data: matchesData }] = await Promise.all([teamsPromise, matchQuery])
-      setTeams(teamsData || [])
+      // Если есть сезон — оставляем только команды, заявленные в нём
+      const seasonTeamIds = seasonId ? new Set((seasonTeamsRes.data || []).map(r => r.team_id)) : null
+      const seasonTeams = seasonTeamIds ? (teamsData || []).filter(t => seasonTeamIds.has(t.id)) : teamsData
+      setTeams(seasonTeams || [])
       const allMatches = matchesData || []
       setMatches(filterBySeason(allMatches, seasonId))
       setLoading(false)

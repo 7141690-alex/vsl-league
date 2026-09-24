@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { trackPageView, trackSessionStart } from './lib/analytics'
 import Standings from './pages/Standings'
 import Schedule from './pages/Schedule'
-import Admin from './pages/Admin'
-import TeamPage from './pages/TeamPage'
-import PlayerPage from './pages/PlayerPage'
-import AwardsPage from './pages/AwardsPage'
-import StatsPage from './pages/Stats'
+const Admin = lazy(() => import('./pages/Admin'))
+const TeamPage = lazy(() => import('./pages/TeamPage'))
+const PlayerPage = lazy(() => import('./pages/PlayerPage'))
+const AwardsPage = lazy(() => import('./pages/AwardsPage'))
+const StatsPage = lazy(() => import('./pages/Stats'))
 
 const IconStandings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
@@ -144,11 +144,21 @@ function InstallBanner() {
   )
 }
 
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
 export default function App() {
   const [leagues, setLeagues] = useState(DEFAULT_LEAGUES)
   const [league, setLeague] = useState(() => readPreferredLeagueName() || 'male')
   const [seasons, setSeasons] = useState([])
   const [seasonId, setSeasonId] = useState(null) // null = текущий (is_current)
+  // Страницы рендерятся после ответа по сезонам, иначе данные грузятся дважды (без сезона и с ним).
+  const [seasonsReady, setSeasonsReady] = useState(false)
 
   const [leagueOpen, setLeagueOpen] = useState(false)
   const [seasonOpen, setSeasonOpen] = useState(false)
@@ -177,6 +187,8 @@ export default function App() {
           else setSeasonId(data[0].id)
         }
       })
+      .catch(() => {})
+      .finally(() => setSeasonsReady(true))
   }, [])
 
   useEffect(() => {
@@ -265,7 +277,9 @@ export default function App() {
             ← На сайт
           </button>
         </div>
-        <Admin />
+        <Suspense fallback={<PageSpinner />}>
+          <Admin />
+        </Suspense>
       </div>
     )
   }
@@ -351,6 +365,10 @@ export default function App() {
       </header>
 
       <main style={{ maxWidth: 768, margin: '0 auto', padding: '32px 16px' }}>
+        {!seasonsReady ? (
+          <PageSpinner />
+        ) : (
+        <Suspense fallback={<PageSpinner />}>
         {selectedPlayer ? (
           <PlayerPage playerId={selectedPlayer} onBack={() => setSelectedPlayer(null)} />
         ) : selectedTeam ? (
@@ -391,6 +409,8 @@ export default function App() {
               />
             )}
           </>
+        )}
+        </Suspense>
         )}
       </main>
 
