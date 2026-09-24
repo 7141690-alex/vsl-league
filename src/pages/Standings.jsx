@@ -5,39 +5,41 @@ import AwardBadge, { AWARD_CONFIG } from '../components/AwardBadge'
 import { buildStandings } from '../lib/standings'
 import { filterBySeason } from '../lib/matches'
 
-export default function Standings({ league, seasonId, onSelectTeam, onShowAwards, onSelectPlayer }) {
+export default function Standings({ league, seasonId, seasonsReady = true, onSelectTeam, onShowAwards, onSelectPlayer }) {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
   const [leagueConfig, setLeagueConfig] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [baseLoading, setBaseLoading] = useState(true)
+  const [awardsDone, setAwardsDone] = useState(false)
 
+  // Данные лиги не зависят от сезона — стартуют сразу, не дожидаясь ответа по сезонам.
   useEffect(() => {
+    let cancelled = false
     async function load() {
-      setLoading(true)
-
-      // Все запросы независимы — идут параллельно (раньше 3 шага подряд).
-      const [{ data: lgData }, seasonTeamsRes, { data: teamsData }, { data: matchesData }] = await Promise.all([
+      setBaseLoading(true)
+      const [{ data: lgData }, { data: teamsData }, { data: matchesData }] = await Promise.all([
         supabase.from('leagues').select('playoff_spots, relegation_spots').eq('name', league).single(),
-        seasonId
-          ? supabase.from('season_teams').select('team_id').eq('season_id', seasonId)
-          : Promise.resolve({ data: null }),
-        supabase.from('teams').select('*').eq('league', league),
+        supabase.from('teams').select('*, season_teams(season_id)').eq('league', league),
         supabase.from('matches').select('*').eq('league', league).eq('status', 'finished'),
       ])
+      if (cancelled) return
       setLeagueConfig(lgData)
-
-      // Если есть сезон — оставляем только команды, заявленные в нём
-      const seasonTeamIds = seasonId ? new Set((seasonTeamsRes.data || []).map(r => r.team_id)) : null
-      const seasonTeams = seasonTeamIds ? (teamsData || []).filter(t => seasonTeamIds.has(t.id)) : teamsData
-      setTeams(seasonTeams || [])
-      const allMatches = matchesData || []
-      setMatches(filterBySeason(allMatches, seasonId))
-      setLoading(false)
+      setTeams(teamsData || [])
+      setMatches(matchesData || [])
+      setBaseLoading(false)
     }
     load()
-  }, [league, seasonId])
+    return () => { cancelled = true }
+  }, [league])
 
-  const standings = buildStandings(teams, matches)
+  // Команды сезона — из встроенной связи season_teams (отдельный запрос ждал бы ответа по сезонам)
+  const seasonTeams = seasonId
+    ? teams.filter(t => t.season_teams?.some(st => st.season_id === seasonId))
+    : teams
+  const loading = baseLoading || !seasonsReady
+  const seasonMatches = filterBySeason(matches, seasonId)
+
+  const standings = buildStandings(seasonTeams, seasonMatches)
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -135,13 +137,14 @@ export default function Standings({ league, seasonId, onSelectTeam, onShowAwards
       </div>
     </div>
 
-    <AwardsWidget league={league} seasonId={seasonId} onShowAwards={onShowAwards} onSelectPlayer={onSelectPlayer} />
-    <CalendarWidget league={league} seasonId={seasonId} />
+    <AwardsWidget league={league} seasonId={seasonId} onShowAwards={onShowAwards} onSelectPlayer={onSelectPlayer} onDone={() => setAwardsDone(true)} />
+    {/* Календарь ниже сгиба: монтируем после номинаций, иначе их появление сдвигает его (CLS) */}
+    {awardsDone && <CalendarWidget league={league} seasonId={seasonId} />}
     </>
   )
 }
 
-function AwardsWidget({ league, seasonId, onShowAwards, onSelectPlayer }) {
+function AwardsWidget({ league, seasonId, onShowAwards, onSelectPlayer, onDone }) {
   const [awards, setAwards] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -156,8 +159,10 @@ function AwardsWidget({ league, seasonId, onShowAwards, onSelectPlayer }) {
       const all = data || []
       setAwards(seasonId ? all.filter(a => a.season_id === seasonId) : all)
       setLoading(false)
+      onDone?.()
     }
     load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onDone — одноразовый флаг, перезапуск загрузки не нужен
   }, [league, seasonId])
 
   if (loading || awards.length === 0) return null

@@ -365,7 +365,7 @@ export default function App() {
       </header>
 
       <main style={{ maxWidth: 768, margin: '0 auto', padding: '32px 16px' }}>
-        {!seasonsReady ? (
+        {!seasonsReady && !(tab === 'standings' && !selectedPlayer && !selectedTeam && !showAwards) ? (
           <PageSpinner />
         ) : (
         <Suspense fallback={<PageSpinner />}>
@@ -387,6 +387,7 @@ export default function App() {
               <Standings
                 league={league}
                 seasonId={seasonId}
+                seasonsReady={seasonsReady}
                 onSelectTeam={setSelectedTeam}
                 onShowAwards={() => setShowAwards(true)}
                 onSelectPlayer={setSelectedPlayer}
