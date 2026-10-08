@@ -343,6 +343,15 @@ export default function Admin() {
   )
 }
 
+const PERIOD_DEFS = [
+  { key: 'day', label: 'За сутки', days: 1 },
+  { key: 'week', label: 'За неделю', days: 7 },
+  { key: 'month', label: 'За месяц', days: 30 },
+  { key: 'threeMonths', label: 'За 3 месяца', days: 90 },
+  { key: 'sixMonths', label: 'За 6 месяцев', days: 180 },
+  { key: 'year', label: 'За год', days: 365 },
+]
+
 function AnalyticsAdmin() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -350,16 +359,17 @@ function AnalyticsAdmin() {
   const [periodKey, setPeriodKey] = useState('week')
 
   useEffect(() => {
-    loadAnalytics()
-  }, [])
+    loadAnalytics(periodKey)
+  }, [periodKey])
 
-  async function loadAnalytics() {
+  async function loadAnalytics(key) {
     setLoading(true)
     setError('')
     try {
       const pageSize = 1000
       const maxPages = 20
-      const yearAgo = new Date(Date.now() - 366 * 24 * 60 * 60 * 1000).toISOString()
+      const periodDef = PERIOD_DEFS.find(p => p.key === key) || PERIOD_DEFS[1]
+      const since = new Date(Date.now() - periodDef.days * 24 * 60 * 60 * 1000).toISOString()
       let from = 0
       let all = []
 
@@ -368,10 +378,12 @@ function AnalyticsAdmin() {
         // Раньше тянулось поле metadata целиком — несколько килобайт jsonb
         // на строку, до 20 000 строк. Из него используются ровно два значения,
         // поэтому забираем только их.
+        // И раньше это всегда был год данных (до 20 000 строк) независимо от
+        // выбранного периода — теперь грузим только то, что реально показываем.
         const { data, error: fetchError } = await supabase
           .from('site_visit_events')
           .select('created_at, visitor_id, session_id, event_type, page_key, league, referrer, user_agent:metadata->device->>user_agent, platform:metadata->device->>platform')
-          .gte('created_at', yearAgo)
+          .gte('created_at', since)
           .order('created_at', { ascending: false })
           .range(from, to)
 
@@ -393,14 +405,7 @@ function AnalyticsAdmin() {
   const stats = useMemo(() => {
     const now = Date.now()
     const dayMs = 24 * 60 * 60 * 1000
-    const periods = [
-      { key: 'day', label: 'За сутки', start: now - dayMs },
-      { key: 'week', label: 'За неделю', start: now - 7 * dayMs },
-      { key: 'month', label: 'За месяц', start: now - 30 * dayMs },
-      { key: 'threeMonths', label: 'За 3 месяца', start: now - 90 * dayMs },
-      { key: 'sixMonths', label: 'За 6 месяцев', start: now - 180 * dayMs },
-      { key: 'year', label: 'За год', start: now - 365 * dayMs },
-    ]
+    const periods = PERIOD_DEFS.map(p => ({ key: p.key, label: p.label, start: now - p.days * dayMs }))
 
     const prepared = events.map(ev => ({
       ...ev,
@@ -448,7 +453,7 @@ function AnalyticsAdmin() {
       <div style={{ ...card, padding: 16, border: '1px solid rgba(255,73,92,0.25)' }}>
         <div style={{ color: '#FF495C', fontSize: 13, fontWeight: 700 }}>Ошибка аналитики</div>
         <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 6 }}>{error}</div>
-        <button onClick={loadAnalytics} style={{ ...btnSecondary, marginTop: 14, padding: '8px 14px' }}>Повторить</button>
+        <button onClick={() => loadAnalytics(periodKey)} style={{ ...btnSecondary, marginTop: 14, padding: '8px 14px' }}>Повторить</button>
       </div>
     )
   }
@@ -463,7 +468,7 @@ function AnalyticsAdmin() {
               Период: <b style={{ color: '#fff' }}>{stats.selectedPeriodLabel}</b>
             </div>
           </div>
-          <button onClick={loadAnalytics} style={{ ...btnSecondary, padding: '8px 14px' }}>Обновить</button>
+          <button onClick={() => loadAnalytics(periodKey)} style={{ ...btnSecondary, padding: '8px 14px' }}>Обновить</button>
         </div>
       </div>
 
